@@ -1,10 +1,11 @@
-import { Metadata } from 'next';
+import { Metadata } from "next";
+import ExploreFeed from "./feed";
 
 export const metadata: Metadata = {
-  title: 'Explore',
-  description: 'Explore new tweets',
+  title: "Explore",
+  description: "Explore new tweets",
 };
 
 export default function Explore() {
-  return <div>ASD</div>;
+  return <ExploreFeed />;
 }
