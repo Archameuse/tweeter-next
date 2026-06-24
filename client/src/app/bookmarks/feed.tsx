@@ -1,21 +1,13 @@
 "use client";
 
-import PostMain from "@/components/post/postMain";
 import { PageContainer } from "@/components/ui/pageContainer";
 import { SectionFragment } from "@/components/ui/sectionFragment";
-import { Search } from "lucide-react";
+import { STATUS } from "../explore/feed";
 import { useState } from "react";
+import PostMain from "@/components/post/postMain";
 
-export enum STATUS {
-  top = "Top",
-  latest = "Latest",
-  media = "Media",
-}
-export default function ExploreFeed() {
+export default function BookmarksFeed() {
   const [status, setStatus] = useState<STATUS>(STATUS.top);
-  const searchEvent = (e: React.SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-  };
   const loading = false;
   const mockTweets: Tweet[] = [
     {
@@ -133,48 +125,12 @@ export default function ExploreFeed() {
           </SectionFragment>
         </aside>
       </div>
-      <div className="flex flex-col gap-10 w-full h-fit">
-        <form onSubmit={searchEvent} className="w-full">
-          <label
-            htmlFor="tweet-search"
-            className="mb-2 text-sm font-medium text-gray-900 sr-only"
-          >
-            Search
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 inset-s-0 flex items-center ps-3 pointer-events-none">
-              <Search className="w-6 h-6" />
-            </div>
-            <input
-              type="search"
-              id="tweet-search"
-              className="block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-              placeholder="Search..."
-              v-model="search"
-            />
-            <button
-              type="submit"
-              className="text-white absolute cursor-pointer inset-e-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm px-4 py-2 active:opacity-80"
-            >
-              Search
-            </button>
-          </div>
-        </form>
-        <div
-          className={`
-            flex flex-col gap-10 max-w-xl m-auto w-full lg:max-w-fit
-          ${loading && "blur-md cursor-wait **:pointer-events-none"}
-        `}
-        >
-          {/* <ProfilePost
-          v-for="tweet in tweets"
-          @refresh-reply="refresh"
-          :post="tweet"
-        /> */}
-          {mockTweets.map((tweet) => (
-            <PostMain tweet={tweet} key={tweet.id} />
-          ))}
-        </div>
+      <div
+        className={`flex flex-col gap-10 max-w-xl m-auto w-full lg:max-w-fit ${loading && "blur-md cursor-wait [&_*]:pointer-events-none"}`}
+      >
+        {mockTweets.map((tweet) => (
+          <PostMain tweet={tweet} key={tweet.id} />
+        ))}
       </div>
     </PageContainer>
   );
