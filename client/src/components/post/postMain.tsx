@@ -1,9 +1,15 @@
 "use client";
-import { Bookmark, Heart, MessageSquare, Repeat2 } from "lucide-react";
+import {
+  Bookmark,
+  Heart,
+  Image as LucidImage,
+  MessageSquare,
+  Repeat2,
+} from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "../ui/userAvatar";
 import PostImage from "./postImage";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import symbolFormatter from "@/utils/symbolFormatter";
 import PostAction, { POST_TYPE } from "./postAction";
 
@@ -45,6 +51,8 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
     () => tweet.hashtag?.replace(/^#+/, "") || "",
     [tweet.hashtag],
   );
+
+  const canReply = useMemo(() => true, []);
 
   const retweetLoading = false;
   const likeLoading = false;
@@ -126,6 +134,21 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
             <span className="hidden sm:block">Save</span>
           </PostAction>
         </div>
+        {canReply && (
+          <div className="min-h-10 h-fit flex gap-4">
+            <div className="h-10">
+              <UserAvatar size={64} src="/temp/ (25).jpg" />
+            </div>
+            <div className="grow cursor-pointer min-h-full overflow-y-auto max-h-96 px-3 py-2 text-sm font-noto-sans bg-tertiaryGray dark:bg-secondaryGray rounded-xl">
+              <div className="h-6 z-10 aspect-square float-right cursor-pointer">
+                <LucidImage className="text-[#BDBDBD] dark:text-tertiaryGray w-full h-full hover:text-secondaryGray dark:hover:text-primaryGray active:text-primaryBlack dark:active:text-primaryBlack" />
+              </div>
+              <div className="min-h-full bg-transparent text-justify focus:outline-none wrap-break-words [hyphens:auto] empty:before:content-[attr(placeholder)] before:pointer-events-none text-[#BDBDBD] dark:text-tertiaryGray focus:invisible">
+                Tweet your reply
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
