@@ -1,9 +1,11 @@
 "use client";
-import { Repeat2 } from "lucide-react";
+import { Bookmark, Heart, MessageSquare, Repeat2 } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "../ui/userAvatar";
 import PostImage from "./postImage";
 import { useMemo } from "react";
+import symbolFormatter from "@/utils/symbolFormatter";
+import PostAction, { POST_TYPE } from "./postAction";
 
 export default function PostMain({ tweet }: { tweet: Tweet }) {
   const date = useMemo(() => {
@@ -44,6 +46,13 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
     [tweet.hashtag],
   );
 
+  const retweetLoading = false;
+  const likeLoading = false;
+  const saveLoading = false;
+  const retweetActive = false;
+  const likeActive = false;
+  const saveActive = false;
+
   return (
     <div className="w-full select-none">
       {tweet.retweetedBy && (
@@ -83,6 +92,40 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
             <PostImage src={tweet.image} />
           </div>
         )}
+        <ul className="flex text-primaryGray dark:text-tertiaryGray text-xs font-noto-sans justify-end gap-4">
+          <li>{symbolFormatter(tweet.replies, 1)} Comments</li>
+          <li>{symbolFormatter(tweet.retweets, 1)} Retweets</li>
+          <li>{symbolFormatter(tweet.likes, 1)} Likes</li>
+        </ul>
+        <div className="p-4 flex gap-4 items-center border-y border-tertiaryGray">
+          <PostAction icon={MessageSquare}>
+            <span className="hidden sm:block">Comments</span>
+          </PostAction>
+          <PostAction
+            icon={Repeat2}
+            loading={retweetLoading}
+            active={retweetActive}
+            type={POST_TYPE.retweet}
+          >
+            <span className="hidden sm:block">Retweet</span>
+          </PostAction>
+          <PostAction
+            icon={Heart}
+            loading={likeLoading}
+            active={likeActive}
+            type={POST_TYPE.like}
+          >
+            <span className="hidden sm:block">Like</span>
+          </PostAction>
+          <PostAction
+            icon={Bookmark}
+            loading={saveLoading}
+            active={saveActive}
+            type={POST_TYPE.save}
+          >
+            <span className="hidden sm:block">Save</span>
+          </PostAction>
+        </div>
       </div>
     </div>
   );
