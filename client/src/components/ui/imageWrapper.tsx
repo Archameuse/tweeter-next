@@ -13,8 +13,8 @@ export default function ImageWrapper({
       src={src || "/noprofile.svg"}
       fill
       alt={alt || ""}
-      className=""
       draggable={false}
+      {...props}
     />
   );
 }

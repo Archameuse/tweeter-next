@@ -1,6 +1,7 @@
 "use client";
 
 import PostMain from "@/components/post/postMain";
+import PostModal from "@/components/post/postModal";
 import { PageContainer } from "@/components/ui/pageContainer";
 import { SectionFragment } from "@/components/ui/sectionFragment";
 import { Search } from "lucide-react";
@@ -32,6 +33,7 @@ export default function ExploreFeed() {
       replies: 5,
       retweets: 12,
       hashtag: "#webdev",
+      image: "/temp/ (9).mp4",
       liked: true,
       saved: false,
       retweeted: false,
@@ -98,7 +100,7 @@ export default function ExploreFeed() {
         id: 105,
         username: "coffee_bytes",
       },
-      date: new Date("2026-06-23T06:00:00Z"),
+      date: new Date("2026-06-24T06:00:00Z"),
       likes: 310,
       replies: 45,
       retweets: 88,

@@ -2,50 +2,51 @@ import { Repeat2 } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "../ui/userAvatar";
 import PostImage from "./postImage";
+import { useMemo } from "react";
 
-const date = (tweetDate: Date) => {
-  if (!tweetDate) return undefined;
-  const now = new Date();
-  const date = new Date(tweetDate);
-  const getTime = () => {
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const formattedHours = hours < 10 ? "0" + hours : hours;
-    const formattedMinutes = minutes < 10 ? "0" + minutes : minutes;
-    return `${formattedHours}:${formattedMinutes}`;
-  };
-  const monthName = (month: number): string => {
-    if (month > 11) month = 11;
-    if (month < 0) month = 0;
-    const monthNames = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-    return monthNames[Math.floor(month)];
-  };
-  if (now.getFullYear() > date.getFullYear())
-    return `${monthName(date.getMonth())} ${date.getDate()}, ${date.getFullYear()}`;
-  if (now.getDate() === date.getDate() && now.getMonth() === date.getMonth())
-    return `Today, at ${getTime()}`;
-  return `${date.getDate()} ${monthName(date.getMonth())} at ${getTime()}`;
-};
-
-const stripHash = (hashtag: string) => hashtag.replace(/^#+/, "");
 export default function PostMain({ tweet }: { tweet: Tweet }) {
+  const date = useMemo(() => {
+    if (!tweet.date) return undefined;
+    const now = new Date();
+    const date = new Date(tweet.date);
+    const getTime = () => {
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const formattedHours = hours < 10 ? "0" + hours : hours;
+      const formattedMinutes = minutes < 10 ? "0" + minutes : minutes;
+      return `${formattedHours}:${formattedMinutes}`;
+    };
+    const monthName = (month: number): string =>
+      [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ][month % 12];
+    if (now.getFullYear() !== date.getFullYear())
+      return `${monthName(date.getMonth())} ${date.getDate()}, ${date.getFullYear()}`;
+    if (now.getDate() === date.getDate() && now.getMonth() === date.getMonth())
+      return `Today, at ${getTime()}`;
+    return `${date.getDate()} ${monthName(date.getMonth())} at ${getTime()}`;
+  }, [tweet.date]);
+
+  const hashtag = useMemo(
+    () => tweet.hashtag?.replace(/^#+/, "") || "",
+    [tweet.hashtag],
+  );
+
   return (
     <div className="w-full select-none">
       {tweet.retweetedBy && (
-        <div className="ml-5 w-full flex items-center text-primaryGray dark:text-tertiaryGray">
+        <div className="pl-5 w-full flex items-center text-primaryGray dark:text-tertiaryGray">
           <Repeat2 />
           {tweet.retweetedBy} Retweeted
         </div>
@@ -66,7 +67,7 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
                   {tweet.user.username}
                 </span>
                 <span className="text-xs text-primaryGray dark:text-tertiaryGray">
-                  {date(tweet.date)}
+                  {date}
                 </span>
               </div>
             </div>
@@ -74,9 +75,7 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
         )}
         <div className="font-noto-sans text-secondaryGray dark:text-white">
           <p>{tweet.content}</p>
-          {tweet.hashtag && (
-            <p className="mt-4 opacity-60">{"#" + stripHash(tweet.hashtag)}</p>
-          )}
+          {tweet.hashtag && <p className="mt-4 opacity-60">{"#" + hashtag}</p>}
         </div>
         {tweet.image && (
           <div className="w-full h-96 rounded-md shadow-sm overflow-hidden relative">
