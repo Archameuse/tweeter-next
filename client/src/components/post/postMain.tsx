@@ -1,3 +1,4 @@
+"use client";
 import { Repeat2 } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "../ui/userAvatar";

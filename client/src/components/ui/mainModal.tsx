@@ -9,13 +9,14 @@ export default function ModalMain({
   noScroll,
 }: {
   ref: Ref<HTMLDialogElement>;
-  headline: string;
+  headline?: string;
   onClose: () => void;
   children: React.ReactNode;
   noScroll?: boolean;
 }) {
   return (
     <dialog
+      closedby="any"
       ref={ref}
       onClose={onClose}
       className="w-full max-w-2xl rounded-lg bg-transparent p-0 m-auto backdrop:bg-black/50 open:flex open:flex-col justify-center overflow-hidden"
@@ -28,7 +29,7 @@ export default function ModalMain({
           <button
             onClick={onClose}
             type="button"
-            className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center"
+            className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center cursor-pointer"
           >
             <X className="size-5" />
             <span className="sr-only">Close modal</span>

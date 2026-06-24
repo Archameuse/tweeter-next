@@ -1,23 +1,33 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import ImageWrapper from "../ui/imageWrapper";
+import { useModalStore } from "../../../store/useModalStore";
 
-const isVideo = (link?: string): boolean => {
-  if (!link) return false;
-  const videoRegex = /\.(webm|mp4)$/i;
-  return videoRegex.test(link);
-};
 export default function PostImage({ src }: { src: string }) {
   const video = useRef<HTMLVideoElement>(null);
-  const [timestamp, setTimestamp] = useState(0);
+  const isVideo = useMemo(() => /\.(webm|mp4)($|\?)/i.test(src), [src]);
+  const setModal = useModalStore((state) => state.setMediaData);
+  const data = useModalStore((state) => state.mediaData);
+  const modalTimestamp = useModalStore((state) => state.modalTimestamp);
   // const [showModal, setShowModal] = useState(false);
   const click = () => {
     if (video.current) {
       video.current.pause();
-      setTimestamp(video.current.currentTime);
     }
-    // setShowModal(true);
+    setModal({
+      src,
+      isVideo,
+      timestamp: video.current?.currentTime,
+    });
   };
-  const isVideo = useMemo(() => /\.(webm|mp4)($|\?)/i.test(src), [src]);
+
+  useEffect(() => {
+    if (!video.current) return;
+    if (!data && video.current.paused) {
+      if (modalTimestamp || modalTimestamp === 0)
+        video.current.currentTime = modalTimestamp;
+      video.current.play();
+    } else if (data) video.current.pause();
+  }, [data, modalTimestamp]);
   return (
     <>
       {!isVideo ? (

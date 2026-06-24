@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { ThemeProvider } from "@teispace/next-themes";
+import PostModal from "@/components/post/postModal";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -33,6 +34,7 @@ export default function RootLayout({
         <ThemeProvider>
           <Header />
           {children}
+          <PostModal />
         </ThemeProvider>
       </body>
     </html>
