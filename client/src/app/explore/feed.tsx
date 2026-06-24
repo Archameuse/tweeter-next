@@ -1,7 +1,6 @@
 "use client";
 
 import PostMain from "@/components/post/postMain";
-import PostModal from "@/components/post/postModal";
 import { PageContainer } from "@/components/ui/pageContainer";
 import { SectionFragment } from "@/components/ui/sectionFragment";
 import { Search } from "lucide-react";

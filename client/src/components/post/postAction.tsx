@@ -49,7 +49,7 @@ export default function PostAction({
       className={`flex gap-3 font-noto-sans text-sm py-3 px-2 items-center rounded-lg grow cursor-pointer select-none hover:bg-tertiaryGray active:bg-[#dadada] dark:hover:bg-primaryGray dark:active:bg-secondaryGray ${loading ? "cursor-not-allowed opacity-80 active:bg-transparent hover:bg-transparent dark:hover:bg-transparent dark:active:bg-transparent" : ""} ${left ? "justify-start" : "justify-center"} ${active && !loading ? activeClass : "text-secondaryGray dark:text-tertiaryGray"} ${className ? className : ""}`}
     >
       {!loading && <Icon className={reverse ? "-scale-x-100" : ""} />}
-      {!loading ? children : <Loader2 />}
+      {!loading ? children : <Loader2 className="animate-spin" />}
     </div>
   );
 }

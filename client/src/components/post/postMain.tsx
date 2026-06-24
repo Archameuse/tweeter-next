@@ -9,7 +9,7 @@ import {
 import Link from "next/link";
 import { UserAvatar } from "../ui/userAvatar";
 import PostImage from "./postImage";
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import symbolFormatter from "@/utils/symbolFormatter";
 import PostAction, { POST_TYPE } from "./postAction";
 
