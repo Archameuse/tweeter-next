@@ -17,7 +17,7 @@ export default function TinyProfile({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center w-full justify-between flex-wrap gap-4">
-        <Link href={`/users/${user.id}`} className="flex items-center gap-4">
+        <Link href={`/user/${user.id}`} className="flex items-center gap-4">
           <div className="h-10">
             <UserAvatar src={user.image} size={64} />
           </div>

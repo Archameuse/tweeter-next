@@ -73,11 +73,11 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
         {tweet.reply?.id && (
           <div>
             Reply to
-            <Link href={`./users/${tweet.reply.id}`}>@{tweet.reply.name}</Link>
+            <Link href={`/user/${tweet.reply.id}`}>@{tweet.reply.name}</Link>
           </div>
         )}
         {tweet.user && (
-          <Link href={"/users/" + tweet.user.id}>
+          <Link href={"/user/" + tweet.user.id}>
             <div className="flex h-10 gap-4">
               <UserAvatar src={tweet.user.image} size={80} />
               <div className="flex flex-col justify-between">

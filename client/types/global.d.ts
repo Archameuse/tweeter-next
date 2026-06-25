@@ -34,6 +34,7 @@ declare global {
   }
   interface Profile extends UserSettings {
     followers: number;
+    following: number;
   }
 
   interface Trend {
