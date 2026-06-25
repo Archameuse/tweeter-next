@@ -18,7 +18,8 @@ export default function ModalMain({
     <dialog
       closedby="any"
       ref={ref}
-      onClose={onClose}
+      onClose={(e) => e.target === e.currentTarget && onClose()}
+      onCancel={(e) => e.target === e.currentTarget && onClose()}
       className="w-full max-w-2xl rounded-lg bg-transparent p-0 m-auto backdrop:bg-black/50 open:flex open:flex-col justify-center overflow-hidden"
     >
       <div className="flex flex-col relative h-full min-h-0 bg-white dark:bg-primaryBlack rounded-lg shadow">
@@ -35,7 +36,9 @@ export default function ModalMain({
             <span className="sr-only">Close modal</span>
           </button>
         </div>
-        <div className={noScroll ? "overflow-y-hidden" : "overflow-y-auto"}>
+        <div
+          className={`min-h-0 ${noScroll ? "overflow-y-hidden" : "overflow-y-auto"}`}
+        >
           {children}
         </div>
       </div>

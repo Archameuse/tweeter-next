@@ -1,19 +1,36 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import UnderlinedText from "./ui/underlinedText";
-import { Hash, LucideImage } from "lucide-react";
+import {
+  Earth,
+  Hash,
+  Loader2Icon,
+  LucideImageOff,
+  LucideImagePlus,
+  UsersRound,
+} from "lucide-react";
 import { UserAvatar } from "./ui/userAvatar";
-import ImageWrapper from "./ui/imageWrapper";
 import ActionIcon from "./actionIcon";
+import PostAction from "./post/postAction";
+import PostImage from "./post/postImage";
+import { ActionButton } from "./ui/actionButton";
+import ImageUploadModal from "./modals/imageUploadModal";
+
+const MAX_IMAGE_SIZE = 1024 * 1024 * 10; //bytes
 
 export default function TweetInput({ limit = 50 }: { limit?: number }) {
   const [hash, setHash] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
-  const [image, setImage] = useState<string | null>(null);
-  const [imageLoading, setImageLoading] = useState<boolean>(true);
-  const [imageProgress, setImageProgress] = useState<number>(40);
+  const [messageLoading, setMessageLoading] = useState<boolean>(false);
+  const [image, setImage] = useState<string | null>("/temp/ (30).jpg");
+  const [imageLoading, setImageLoading] = useState<boolean>(false);
+  const [imageProgress, setImageProgress] = useState<number>(0);
+  const [showModal, setShowModal] = useState<boolean>(true);
+  const [chooseType, setChooseType] = useState<boolean>(false);
+  const [everyoneCanReply, setEveryoneCanReply] = useState<boolean>(true);
   const user = { image: "/temp/ (2).jpg", username: "TestUser" };
   const replyId = 0;
+  const insideClickWrapper = useRef<HTMLDivElement>(null);
 
   const messageBoxRef = useRef<HTMLDivElement>(null);
 
@@ -53,6 +70,50 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
   // const pasteHandler = (e: React.ClipboardEvent) => {
   //   // e.preventDefault();
   // };
+
+  const openImageUploadModal = () => {
+    setShowModal(true);
+  };
+  const handleSelectImage = async (file: File) => {
+    if (file.size >= MAX_IMAGE_SIZE)
+      return alert(
+        `Image should be less than ${Math.floor(MAX_IMAGE_SIZE / 1024 / 1024)} MB`,
+      );
+    const localUrl = URL.createObjectURL(file);
+
+    const validateImage = await new Promise<boolean>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = localUrl;
+    });
+    if (!validateImage) {
+      URL.revokeObjectURL(localUrl);
+      return alert("Failed to load image, file might be corrupted.");
+    }
+    if (image && image.startsWith("blob:")) URL.revokeObjectURL(image);
+    setImage(localUrl);
+    setShowModal(false);
+  };
+  const sendTweet = () => {};
+
+  const selectReplyType = (type: boolean) => {
+    setEveryoneCanReply(type);
+    setChooseType(false);
+  };
+
+  useEffect(() => {
+    if (!chooseType) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!target || insideClickWrapper.current?.contains(target)) return;
+      setChooseType(false);
+    };
+    document.body.addEventListener("click", handleOutsideClick);
+    return () => {
+      document.body.removeEventListener("click", handleOutsideClick);
+    };
+  }, [chooseType]);
 
   if (!user) return null;
   return (
@@ -103,15 +164,79 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
                   className={`relative h-full ${imageLoading ? "blur-md" : ""}`}
                 >
                   <div className="absolute top-0 right-0 z-10 h-8 w-8">
-                    <ActionIcon onClick={clearImage} icon={LucideImage} />
+                    <ActionIcon onClick={clearImage} icon={LucideImageOff} />
                   </div>
-                  <ImageWrapper src={image} />
+                  <PostImage src={image} />
                 </div>
               </div>
             )}
           </div>
+          <div className="flex justify-between w-full items-center flex-wrap space-y-2">
+            <div
+              className={`h-6 flex gap-4 text-primaryBlue select-none ${messageLoading ? "pointer-events-none" : ""}`}
+            >
+              <ActionIcon
+                onClick={openImageUploadModal}
+                icon={LucideImagePlus}
+              />
+              <div
+                className="h-full flex items-center gap-2"
+                ref={insideClickWrapper}
+              >
+                <div
+                  className="h-full"
+                  onClick={() => setChooseType((prev) => !prev)}
+                >
+                  <ActionIcon icon={everyoneCanReply ? Earth : UsersRound} />
+                </div>
+                <span className="text-xs font-noto-sans">
+                  {everyoneCanReply
+                    ? "Everyone can reply"
+                    : "People you follow"}
+                </span>
+                {chooseType && (
+                  <div className="bg-white dark:bg-primaryBlack px-3 py-2 flex flex-col gap-4 absolute -bottom-2 translate-y-full drop-shadow-md rounded-xl w-64 z-10">
+                    <div className="flex flex-col text-xs gap-2">
+                      <span className="font-semibold text-primaryBlack dark:text-white">
+                        Who can reply?
+                      </span>
+                      <span className="font-normal font-noto-sans text-primaryGray">
+                        Choose who can reply to this Tweet.
+                      </span>
+                    </div>
+                    <PostAction
+                      icon={Earth}
+                      left
+                      onClick={() => selectReplyType(true)}
+                    >
+                      Everyone
+                    </PostAction>
+                    <PostAction
+                      icon={UsersRound}
+                      left
+                      onClick={() => selectReplyType(false)}
+                    >
+                      People you follow
+                    </PostAction>
+                  </div>
+                )}
+              </div>
+            </div>
+            {!messageLoading ? (
+              <ActionButton onClick={sendTweet}>Tweet</ActionButton>
+            ) : (
+              <ActionButton className="cursor-wait opacity-80 scale-100!">
+                <Loader2Icon className="animate-spin" />
+              </ActionButton>
+            )}
+          </div>
         </div>
       </div>
+      <ImageUploadModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSelect={handleSelectImage}
+      />
     </div>
   );
 }

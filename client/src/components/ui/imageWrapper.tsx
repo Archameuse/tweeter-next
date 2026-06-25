@@ -14,7 +14,7 @@ export default function ImageWrapper({
       fill
       alt={alt || ""}
       draggable={false}
-      className="object-cover object-center"
+      className="object-cover object-center select-none"
       sizes="100%"
       {...props}
     />
