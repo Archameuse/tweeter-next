@@ -1,4 +1,5 @@
-export default function symbolFormatter(num: number, digits: number) {
+export default function symbolFormatter(num?: number, digits: number = 1) {
+  if (!num && num !== 0) return "";
   const lookup = [
     { value: 1, symbol: "" },
     { value: 1e3, symbol: "k" },

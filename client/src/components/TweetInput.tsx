@@ -16,7 +16,7 @@ import PostImage from "./post/postImage";
 import { ActionButton } from "./ui/actionButton";
 import ImageUploadModal from "./modals/imageUploadModal";
 
-const MAX_IMAGE_SIZE = 1024 * 1024 * 10; //bytes
+const MAX_IMAGE_SIZE = 1024 * 1024 * 40; //bytes
 
 export default function TweetInput({ limit = 50 }: { limit?: number }) {
   const [hash, setHash] = useState<string | null>(null);

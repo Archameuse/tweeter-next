@@ -1,6 +1,8 @@
 import PostMain from "@/components/post/postMain";
+import Trends from "@/components/Trends";
 import TweetInput from "@/components/TweetInput";
 import { PageContainer } from "@/components/ui/pageContainer";
+import WhoToFollow from "@/components/whoToFollow";
 
 export default function HomeFeed() {
   const loading = false;
@@ -107,6 +109,10 @@ export default function HomeFeed() {
             <PostMain tweet={tweet} key={tweet.id} />
           ))}
         </div>
+      </div>
+      <div className="hidden lg:flex flex-col gap-6 sticky top-4 w-96 h-[calc(100vh-4rem)] overflow-y-scroll scrollbar-none">
+        <Trends />
+        <WhoToFollow />
       </div>
     </PageContainer>
   );

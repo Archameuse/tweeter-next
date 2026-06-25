@@ -37,6 +37,7 @@ declare global {
   }
 
   interface Trend {
+    id: number;
     name: string; // название тренда # автоматическая
     //tweets: Tweet[]; // твиты по этому хештегу тренду хз
     tweets: number; // количество твитов по этому тренду хз

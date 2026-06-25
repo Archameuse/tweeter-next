@@ -4,7 +4,7 @@ export default function UnderlinedText({
   ...props
 }: Readonly<
   React.ComponentPropsWithoutRef<"span"> & {
-    children: React.ReactNode;
+    children?: React.ReactNode;
     className?: string;
   }
 >) {
