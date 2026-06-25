@@ -3,6 +3,7 @@ import Image, { ImageProps } from "next/image";
 export default function ImageWrapper({
   src,
   alt,
+  className,
   ...props
 }: Partial<ImageProps> & {
   src?: string;
@@ -14,7 +15,7 @@ export default function ImageWrapper({
       fill
       alt={alt || ""}
       draggable={false}
-      className="object-cover object-center select-none"
+      className={`object-cover object-center select-none ${className ? className : ""}`}
       sizes="100%"
       {...props}
     />

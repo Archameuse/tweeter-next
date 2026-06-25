@@ -15,6 +15,7 @@ import PostAction from "./post/postAction";
 import PostImage from "./post/postImage";
 import { ActionButton } from "./ui/actionButton";
 import ImageUploadModal from "./modals/imageUploadModal";
+import validateImage from "@/utils/validateImage";
 
 const MAX_IMAGE_SIZE = 1024 * 1024 * 40; //bytes
 
@@ -75,22 +76,8 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
     setShowModal(true);
   };
   const handleSelectImage = async (file: File) => {
-    if (file.size >= MAX_IMAGE_SIZE)
-      return alert(
-        `Image should be less than ${Math.floor(MAX_IMAGE_SIZE / 1024 / 1024)} MB`,
-      );
-    const localUrl = URL.createObjectURL(file);
-
-    const validateImage = await new Promise<boolean>((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
-      img.src = localUrl;
-    });
-    if (!validateImage) {
-      URL.revokeObjectURL(localUrl);
-      return alert("Failed to load image, file might be corrupted.");
-    }
+    const { error, localUrl } = await validateImage(file, MAX_IMAGE_SIZE);
+    if (!localUrl) return alert(error);
     if (image && image.startsWith("blob:")) URL.revokeObjectURL(image);
     setImage(localUrl);
     setShowModal(false);
