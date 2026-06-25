@@ -1,13 +1,8 @@
-"use client";
-
-import { PageContainer } from "@/components/ui/pageContainer";
-import { SectionFragment } from "@/components/ui/sectionFragment";
-import { STATUS } from "../explore/feed";
-import { useState } from "react";
 import PostMain from "@/components/post/postMain";
+import TweetInput from "@/components/TweetInput";
+import { PageContainer } from "@/components/ui/pageContainer";
 
-export default function BookmarksFeed() {
-  const [status, setStatus] = useState<STATUS>(STATUS.top);
+export default function HomeFeed() {
   const loading = false;
   const mockTweets: Tweet[] = [
     {
@@ -103,34 +98,15 @@ export default function BookmarksFeed() {
   ];
   return (
     <PageContainer>
-      <div>
-        <aside className="sticky top-4 py-5 w-full lg:w-80 shrink-0 flex flex-col gap-4 bg-white dark:bg-secondaryGray shadow-md dark:shadow-primaryBlack rounded-lg h-fit">
-          <SectionFragment
-            onClick={() => setStatus(STATUS.top)}
-            active={status === STATUS.top}
-          >
-            {STATUS.top}
-          </SectionFragment>
-          <SectionFragment
-            onClick={() => setStatus(STATUS.latest)}
-            active={status === STATUS.latest}
-          >
-            {STATUS.latest}
-          </SectionFragment>
-          <SectionFragment
-            onClick={() => setStatus(STATUS.media)}
-            active={status === STATUS.media}
-          >
-            {STATUS.media}
-          </SectionFragment>
-        </aside>
-      </div>
-      <div
-        className={`flex flex-col gap-10 max-w-xl m-auto w-full lg:max-w-fit ${loading && "blur-md cursor-wait **:pointer-events-none"}`}
-      >
-        {mockTweets.map((tweet) => (
-          <PostMain tweet={tweet} key={tweet.id} />
-        ))}
+      <div className="flex flex-col gap-10 w-full h-fit">
+        <TweetInput />
+        <div
+          className={`flex flex-col gap-10 max-w-xl m-auto w-full lg:max-w-fit ${loading && "blur-md cursor-wait **:pointer-events-none"}`}
+        >
+          {mockTweets.map((tweet) => (
+            <PostMain tweet={tweet} key={tweet.id} />
+          ))}
+        </div>
       </div>
     </PageContainer>
   );

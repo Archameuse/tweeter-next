@@ -6,6 +6,6 @@ export const metadata: Metadata = {
   description: "View your bookmarks",
 };
 
-export default function BookmarksPage() {
+export default function Bookmarks() {
   return <BookmarksFeed />;
 }

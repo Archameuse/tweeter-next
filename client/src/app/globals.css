@@ -29,6 +29,7 @@
   --color-secondaryGray: var(--secondaryGray);
   --color-tertiaryGray: var(--tertiaryGray);
   --font-poppins: var(--font-poppins), "sans-serif";
+  --font-noto-sans: var(--font-noto-sans), "sans-serif";
 }
 
 /* @media (prefers-color-scheme: dark) {

@@ -7,7 +7,7 @@ export enum POST_TYPE {
   save,
 }
 
-interface PostActionProps {
+interface PostActionProps extends React.ComponentPropsWithoutRef<"div"> {
   icon: LucideIcon;
   type?: POST_TYPE;
   children: React.ReactNode;
@@ -16,7 +16,6 @@ interface PostActionProps {
   active?: boolean;
   reverse?: boolean;
   className?: string;
-  props?: React.PropsWithoutRef<HTMLDivElement>;
 }
 
 export default function PostAction({

@@ -2,7 +2,7 @@
 import {
   Bookmark,
   Heart,
-  Image as LucidImage,
+  LucideImage,
   MessageSquare,
   Repeat2,
 } from "lucide-react";
@@ -141,7 +141,7 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
             </div>
             <div className="grow cursor-pointer min-h-full overflow-y-auto max-h-96 px-3 py-2 text-sm font-noto-sans bg-tertiaryGray dark:bg-secondaryGray rounded-xl">
               <div className="h-6 z-10 aspect-square float-right cursor-pointer">
-                <LucidImage className="text-[#BDBDBD] dark:text-tertiaryGray w-full h-full hover:text-secondaryGray dark:hover:text-primaryGray active:text-primaryBlack dark:active:text-primaryBlack" />
+                <LucideImage className="text-[#BDBDBD] dark:text-tertiaryGray w-full h-full hover:text-secondaryGray dark:hover:text-primaryGray active:text-primaryBlack dark:active:text-primaryBlack" />
               </div>
               <div className="min-h-full bg-transparent text-justify focus:outline-none wrap-break-words [hyphens:auto] empty:before:content-[attr(placeholder)] before:pointer-events-none text-[#BDBDBD] dark:text-tertiaryGray focus:invisible">
                 Tweet your reply
