@@ -13,7 +13,7 @@ const profile: Profile = {
 };
 export const metadata: Metadata = {
   title: profile.username,
-  description: "Explore new tweets",
+  description: "See user profile of " + profile.username,
 };
 
 export default function User() {
