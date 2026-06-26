@@ -1,6 +1,7 @@
 "use client";
 
 import ActionIcon from "@/components/actionIcon";
+import ImageCropModal from "@/components/modals/imageCropModal";
 import ImageUploadModal from "@/components/modals/imageUploadModal";
 import { ActionButton } from "@/components/ui/actionButton";
 import ImageWrapper from "@/components/ui/imageWrapper";
@@ -35,6 +36,18 @@ export default function SettingsFeed() {
     setUser((prev) => ({ ...prev, banner: localUrl }));
     setShowBannerModal(false);
   };
+
+  const handleSelectAvatar = async (file: File) => {
+    // validated in crop modal already before cropping
+    // so just create url for cropped image
+    // and update user
+    const localUrl = URL.createObjectURL(file);
+    if (user.image && user.image.startsWith("blob:"))
+      URL.revokeObjectURL(user.image);
+    setUser((prev) => ({ ...prev, image: localUrl }));
+    setShowAvatarModal(false);
+  };
+
   const clearBanner = () => {
     if (user.banner && user.banner.startsWith("blob:"))
       URL.revokeObjectURL(user.banner);
@@ -53,6 +66,7 @@ export default function SettingsFeed() {
     <form
       className="w-full flex flex-col items-center gap-10"
       onSubmit={(e) => e.preventDefault()}
+      onReset={() => setUser(mockUser)}
     >
       <div className="flex w-full justify-center p-4 text-primaryGray border-b-gray-300 border-b">
         <h1 className="text-2xl w-full max-w-5xl">Settings</h1>
@@ -163,6 +177,11 @@ export default function SettingsFeed() {
         isOpen={showBannerModal}
         onClose={() => setShowBannerModal(false)}
         onSelect={handleSelectBanner}
+      />
+      <ImageCropModal
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
+        onSelect={handleSelectAvatar}
       />
     </form>
   );
