@@ -11,7 +11,7 @@ import { ActionButton } from "./ui/actionButton";
 
 export function Header() {
   const [expanded, setExpanded] = useState(false);
-  const user = true;
+  const [user, setUser] = useState(true);
   const route = usePathname();
   const { theme, setTheme } = useTheme();
 
@@ -19,7 +19,9 @@ export function Header() {
   const isExplore = route === "/explore";
   const isBookmarks = route === "/bookmarks";
 
-  const signOut = async () => {};
+  const signOut = async () => {
+    setUser(false);
+  };
 
   return (
     <nav
@@ -100,7 +102,7 @@ export function Header() {
             </Link>
           </div>
         ) : (
-          <Link href="/signIn">
+          <Link href="/auth">
             <ActionButton>Login</ActionButton>
           </Link>
         )}
@@ -128,28 +130,38 @@ export function Header() {
           {user && (
             <>
               <HeaderLiButton active={isHome}>
-                <Link className="w-full pl-4" href="/">
+                <Link className="w-full h-full flex items-center" href="/">
                   Home
                 </Link>
               </HeaderLiButton>
               <HeaderLiButton active={isExplore}>
-                <Link className="w-full pl-4" href="/explore">
+                <Link
+                  className="w-full h-full flex items-center"
+                  href="/explore"
+                >
                   Explore
                 </Link>
               </HeaderLiButton>
               <HeaderLiButton active={isBookmarks}>
-                <Link className="w-full pl-4" href="/bookmarks">
+                <Link
+                  className="w-full h-full flex items-center"
+                  href="/bookmarks"
+                >
                   Bookmarks
                 </Link>
               </HeaderLiButton>
             </>
           )}
-          <li
+          <HeaderLiButton
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="w-full flex h-10 items-center hover:bg-[#E2E7E9] active:bg-[#c0c5c7] dark:bg-opacity-20! dark:before:content-['Dark_theme'] before:content-['Light_theme'] pl-4 cursor-pointer"
+            className="dark:before:content-['Dark_theme'] before:content-['Light_theme'] cursor-pointer"
           >
             <span className="sr-only">Toggle theme</span>
-          </li>
+          </HeaderLiButton>
+          {/* <li
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="w-full flex h-10 items-center hover:bg-[#E2E7E9]  active:bg-[#c0c5c7] dark:bg-opacity-20! dark:before:content-['Dark_theme'] before:content-['Light_theme'] pl-4 cursor-pointer"
+          ></li> */}
         </ul>
       </aside>
     </nav>
@@ -198,13 +210,18 @@ function HeaderProfile() {
 function HeaderLiButton({
   active,
   children,
-}: {
-  active?: boolean;
-  children: React.ReactNode;
-}) {
+  className,
+  ...props
+}: Readonly<
+  React.ComponentPropsWithoutRef<"li"> & {
+    active?: boolean;
+    children: React.ReactNode;
+  }
+>) {
   return (
     <li
-      className={`w-full flex h-10 items-center hover:bg-[#E2E7E9] active:bg-[#c0c5c7] dark:bg-opacity-20! ${active ? "bg-zinc-400" : ""}`}
+      className={`w-full flex h-10 items-center hover:bg-[#E2E7E9] dark:hover:text-primaryBlack cursor-pointer pl-4 active:bg-[#c0c5c7] dark:bg-opacity-20! ${active ? "bg-zinc-400" : ""} ${className ? className : ""}`}
+      {...props}
     >
       {children}
     </li>

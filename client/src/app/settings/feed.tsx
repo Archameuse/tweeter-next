@@ -21,7 +21,7 @@ export default function SettingsFeed() {
   const [avatarProgress, setAvatarProgress] = useState<number>(0);
   const [bannerProgress, setBannerProgress] = useState<number>(0);
   const [showBannerModal, setShowBannerModal] = useState<boolean>(false);
-  const [showAvatarModal, setShowAvatarModal] = useState<boolean>(true);
+  const [showAvatarModal, setShowAvatarModal] = useState<boolean>(false);
   const openAvatarModal = () => {
     setShowAvatarModal(true);
   };
@@ -38,9 +38,6 @@ export default function SettingsFeed() {
   };
 
   const handleSelectAvatar = async (file: File) => {
-    // validated in crop modal already before cropping
-    // so just create url for cropped image
-    // and update user
     const localUrl = URL.createObjectURL(file);
     if (user.image && user.image.startsWith("blob:"))
       URL.revokeObjectURL(user.image);
@@ -156,7 +153,7 @@ export default function SettingsFeed() {
             </div>
           </div>
         </div>
-        <div className="w-full flex gap-4 ml-[calc(min(9rem,max(calc(40%-9rem),0)))]">
+        <div className="w-full flex gap-4 pl-40">
           <div className="flex w-full max-w-96 m-auto justify-between">
             <button
               type="reset"

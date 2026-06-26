@@ -27,7 +27,7 @@ export default function SignInFeed() {
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
         <form
           onSubmit={handleAuth}
-          className="space-y-6"
+          className="space-y-6 [&_input]:bg-white [&_input]:dark:bg-primaryBlack"
           action="#"
           method="POST"
         >
