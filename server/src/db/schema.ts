@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { defineRelations, sql } from "drizzle-orm";
 import {
   check,
   customType,
@@ -54,7 +54,10 @@ export const sessions = sqliteTable("sessions", {
   session_id: text("session_id", { mode: "text" }).primaryKey(),
   user_id: integer("user_id", { mode: "number" })
     .notNull()
-    .references(() => users.user_id),
+    .references(() => users.user_id, {
+      onDelete: "cascade",
+      onUpdate: "cascade",
+    }),
   expires_at: integer("expires_at", { mode: "timestamp" }).notNull(),
   created_at: integer("created_at", { mode: "timestamp" })
     .notNull()
@@ -161,6 +164,48 @@ export const tweets_hashtags = sqliteTable(
 
 export const likes = sqliteTable(
   "likes",
+  {
+    user_id: integer("user_id", { mode: "number" })
+      .notNull()
+      .references(() => users.user_id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    tweet_id: integer("tweet_id", { mode: "number" })
+      .notNull()
+      .references(() => tweets.tweet_id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    created_at: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [primaryKey({ columns: [table.user_id, table.tweet_id] })],
+);
+export const saves = sqliteTable(
+  "saves",
+  {
+    user_id: integer("user_id", { mode: "number" })
+      .notNull()
+      .references(() => users.user_id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    tweet_id: integer("tweet_id", { mode: "number" })
+      .notNull()
+      .references(() => tweets.tweet_id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    created_at: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [primaryKey({ columns: [table.user_id, table.tweet_id] })],
+);
+export const retweets = sqliteTable(
+  "retweets",
   {
     user_id: integer("user_id", { mode: "number" })
       .notNull()
