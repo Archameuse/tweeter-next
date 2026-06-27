@@ -7,10 +7,13 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "studio": "npx drizzle-kit studio",
+    "push": "npx drizzle-kit push"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
+    "@tursodatabase/database": "^0.6.1",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-beta.22",

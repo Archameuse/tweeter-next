@@ -1,7 +1,5 @@
-import { count, defineRelations, sql } from "drizzle-orm";
+import { defineRelations } from "drizzle-orm";
 import * as schema from "./schema.js";
-import { drizzle } from "drizzle-orm/libsql";
-import { createClient } from "@libsql/client";
 
 export const relations = defineRelations(schema, (r) => ({
   users: {
@@ -58,33 +56,3 @@ export const relations = defineRelations(schema, (r) => ({
     tweets: r.many.tweets(),
   },
 }));
-
-// const client = createClient({ url: "file:local.db" });
-
-// const db = drizzle({
-//   client,
-//   schema,
-//   relations,
-// });
-
-// async function testAutocomplete() {
-//     db.query.users.findFirst({
-//         with: {
-//             likes: {columns:{}},
-
-//         }
-//     })
-//   //   await db.query.hashtags.findFirst({
-//   //     where: {
-//   //         hashtag: '1'
-//   //     },
-//   //     extras: {
-//   //         amountTweets: sql<number>`SELECT COUNT(*) FROM ${schema.follows} WHERE $`
-//   //     }
-//   //   })
-//   //   await db.query.users.findFirst({
-//   //     where: {
-//   //       user_id: 1,
-//   //     },
-//   //   });
-// }
