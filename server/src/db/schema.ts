@@ -30,7 +30,7 @@ export const users = sqliteTable(
     banner: text("banner", { mode: "text" }),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(() => new Date()),
+      .default(sql`(unixepoch())`),
   },
   (table) => [
     check(
@@ -61,7 +61,7 @@ export const sessions = sqliteTable("sessions", {
   expires_at: integer("expires_at", { mode: "timestamp" }).notNull(),
   created_at: integer("created_at", { mode: "timestamp" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .default(sql`(unixepoch())`),
   ip_address: text("ip_address", { mode: "text" }).notNull(),
   user_agent: text("user_agent", { mode: "text" }).notNull(),
 });
@@ -83,7 +83,7 @@ export const follows = sqliteTable(
       }),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(() => new Date()),
+      .default(sql`(unixepoch())`),
   },
   (table) => [
     primaryKey({ columns: [table.follower_id, table.followed_id] }),
@@ -111,7 +111,7 @@ export const tweets = sqliteTable(
     reply_to: integer("reply_to", { mode: "number" }),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(() => new Date()),
+      .default(sql`(unixepoch())`),
   },
   (table) => [
     foreignKey({ columns: [table.reply_to], foreignColumns: [table.tweet_id] })
@@ -129,7 +129,7 @@ export const hashtags = sqliteTable(
     hashtag: text("hashtag", { length: 64, mode: "text" }).notNull().unique(),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(() => new Date()),
+      .default(sql`(unixepoch())`),
   },
   (table) => [
     check(
@@ -157,7 +157,7 @@ export const tweets_hashtags = sqliteTable(
       }),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(() => new Date()),
+      .default(sql`(unixepoch())`),
   },
   (table) => [primaryKey({ columns: [table.tweet_id, table.hashtag_id] })],
 );
@@ -179,7 +179,7 @@ export const likes = sqliteTable(
       }),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(() => new Date()),
+      .default(sql`(unixepoch())`),
   },
   (table) => [primaryKey({ columns: [table.user_id, table.tweet_id] })],
 );
@@ -200,7 +200,7 @@ export const saves = sqliteTable(
       }),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(() => new Date()),
+      .default(sql`(unixepoch())`),
   },
   (table) => [primaryKey({ columns: [table.user_id, table.tweet_id] })],
 );
@@ -221,7 +221,7 @@ export const retweets = sqliteTable(
       }),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(() => new Date()),
+      .default(sql`(unixepoch())`),
   },
   (table) => [primaryKey({ columns: [table.user_id, table.tweet_id] })],
 );

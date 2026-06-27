@@ -1,0 +1,196 @@
+import { db } from "@/db/index.js";
+import {
+  follows,
+  hashtags,
+  likes,
+  retweets,
+  saves,
+  tweets,
+  tweets_hashtags,
+  users,
+} from "@/db/schema.js";
+import { and, count, eq, isNotNull, SelectedFields, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
+import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
+
+const app = new Hono();
+
+const userId = 1; //i would need to somehow get user id from session or something
+
+// top,  <- explore\bookmarks
+// latest, <- explore\bookmarks
+// media, <- all have
+// tweets, <- profile | only tweets of this user
+// tweets&replies, <- profile | tweets of this user + replies to him
+// likes <- profile | only tweets this user liked
+enum FILTER {
+  top = "top",
+  replies = "replies",
+  media = "media",
+  likes = "likes",
+  tweets = "tweets",
+  tweetsAndReplies = "tweetsAndReplies",
+}
+const PAGE_LIMIT = 5;
+
+const dbTweetSchema = z.object({
+  tweet_id: z.number(),
+  content: z.string(),
+  image: z.string().nullable().optional(),
+  created_at: z.coerce.date(),
+  only_followers: z.coerce.boolean(),
+  author: z.object({
+    user_id: z.number(),
+    username: z.string(),
+    avatar: z.string().nullable().optional(),
+    is_followed: z.coerce.boolean(),
+  }),
+  reply_to: z.preprocess(
+    (val) => {
+      if (typeof val === "string") {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return null;
+        }
+      } else return null;
+    },
+    z
+      .object({
+        tweet_id: z.number(),
+        username: z.string(),
+      })
+      .nullable()
+      .optional(),
+  ),
+
+  likes_count: z.coerce.number().default(0),
+  saves_count: z.coerce.number().default(0),
+  retweets_count: z.coerce.number().default(0),
+  replies_count: z.coerce.number().default(0),
+  retweeted_by: z.string().nullable().optional(),
+  hashtag: z.string().nullable().optional(),
+  is_liked: z.coerce.boolean(),
+  is_saved: z.coerce.boolean(),
+  is_retweeted: z.coerce.boolean(),
+});
+
+const dbTweetToGlobalTweetSchema = dbTweetSchema
+  .transform(
+    (db): Tweet => ({
+      id: db.tweet_id,
+      author: {
+        id: db.author.user_id,
+        username: db.author.username,
+        avatar: db.author.avatar,
+        followed: db.author.is_followed,
+      },
+      content: db.content,
+      created_at: db.created_at,
+      likes: db.likes_count,
+      replies: db.replies_count,
+      retweets: db.retweets_count,
+      saves: db.saves_count,
+      hashtag: db.hashtag,
+      image: db.image,
+      liked: db.is_liked,
+      saved: db.is_saved,
+      retweeted: db.is_retweeted,
+      onlyFollowers: db.only_followers,
+      replyTo: db.reply_to && {
+        id: db.reply_to.tweet_id,
+        username: db.reply_to.username,
+      },
+      retweetedBy: db.retweeted_by,
+    }),
+  )
+  .array();
+
+// saved on /bookmarks + filters
+app.get("/bookmarks", async (c) => {
+  const { page, filter, limit } = c.req.query();
+  const parent = alias(tweets, "reply_to");
+  const parentAuthor = alias(users, "reply_to_author");
+  const replyCounter = alias(tweets, "reply_counter");
+  const data: Tweet[] = dbTweetToGlobalTweetSchema.parse(
+    await db
+      .select({
+        tweet_id: tweets.tweet_id,
+        content: tweets.content,
+        image: tweets.image,
+        created_at: tweets.created_at,
+        only_followers: tweets.only_followers,
+        author: {
+          user_id: users.user_id,
+          username: users.username,
+          is_followed: userId
+            ? sql<boolean>`EXISTS(SELECT 1 FROM ${follows} WHERE ${follows.follower_id} = ${userId} AND ${follows.followed_id} = ${tweets.user_id})`
+            : sql<boolean>`FALSE`,
+          avatar: users.avatar,
+        },
+        reply_to: sql<object | null>`
+          CASE
+            WHEN ${tweets.reply_to} IS NOT NULL THEN (
+                SELECT json_object(
+                    ${tweets.tweet_id.name}, ${parent.tweet_id},
+                    ${users.username.name}, ${parentAuthor.username}
+                )
+                FROM ${tweets} ${parent}
+                LEFT JOIN ${users} ${parentAuthor} USING(${sql.identifier(users.user_id.name)})
+                WHERE ${parent.tweet_id} = ${tweets.reply_to}
+            )
+            ELSE NULL 
+          END`,
+        is_liked: userId
+          ? sql<boolean>`EXISTS(SELECT 1 FROM ${likes} WHERE ${likes.tweet_id} = ${tweets.tweet_id} AND ${likes.user_id} = ${userId})`
+          : sql<boolean>`FALSE`,
+        is_retweeted: userId
+          ? sql<boolean>`EXISTS(SELECT 1 FROM ${retweets} WHERE ${retweets.tweet_id} = ${tweets.tweet_id} AND ${retweets.user_id} = ${userId})`
+          : sql<boolean>`FALSE`,
+        is_saved: userId
+          ? sql<boolean>`EXISTS(SELECT 1 FROM ${saves} WHERE ${saves.tweet_id} = ${tweets.tweet_id} AND ${saves.user_id} = ${userId})`
+          : sql<boolean>`FALSE`,
+        likes_count: sql<number>`(SELECT COUNT(${likes.tweet_id}) FROM ${likes} WHERE ${likes.tweet_id} = ${tweets.tweet_id})`,
+        retweets_count: sql<number>`(SELECT COUNT(${retweets.tweet_id}) FROM ${retweets} WHERE ${retweets.tweet_id} = ${tweets.tweet_id})`,
+        saves_count: sql<number>`(SELECT COUNT(${saves.tweet_id}) FROM ${saves} WHERE ${saves.tweet_id} = ${tweets.tweet_id})`,
+        replies_count: sql<number>`(SELECT COUNT(${tweets.tweet_id}) FROM ${tweets} ${replyCounter} WHERE ${replyCounter.reply_to} = ${tweets.tweet_id})`,
+
+        hashtag: sql<any>`(
+            SELECT (${hashtags.hashtag}) 
+            FROM ${tweets_hashtags} 
+            LEFT JOIN ${hashtags} 
+            USING(${sql.identifier(hashtags.hashtag_id.name)})
+            WHERE ${tweets_hashtags.tweet_id} = ${tweets.tweet_id}
+            ORDER BY ${tweets_hashtags.created_at} DESC
+            LIMIT 1
+          )`,
+        //   retweeted_by: sql<string | null>`(
+        //     SELECT ${users.username}
+        //     FROM ${retweets}
+        //     LEFT JOIN ${users}
+        //     USING(${sql.identifier(users.user_id.name)})
+        //     WHERE ${retweets.tweet_id} = ${tweets.tweet_id}
+        //   )`,
+      })
+      .from(tweets)
+      .innerJoin(users, eq(tweets.user_id, users.user_id))
+      .innerJoin(
+        saves,
+        and(eq(tweets.tweet_id, saves.tweet_id), eq(saves.user_id, userId)),
+      ),
+  );
+  return c.json(data);
+});
+
+// all w/o retweets on /explore (replies shown as normal tweets but with some marking that they are replies in fact) + filters+search
+
+// home on / own tweets+retweets + follows tweets and retweets + filters
+
+// profile on /user/:id users tweets+retweets + filters
+
+// replies /replies/:id list of tweets that are replying to this specific id open through modal
+
+// trends /trends top5 hashtags with most tweets for now, maybe later will add some logic
+export default app;

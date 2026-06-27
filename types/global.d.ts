@@ -4,7 +4,7 @@ declare global {
   interface User {
     id: number;
     username: string;
-    image?: string;
+    avatar?: string | null;
     followed?: boolean;
     // banner?: string;
     // status?: string;
@@ -13,19 +13,20 @@ declare global {
   interface Tweet {
     id: number;
     content: string;
-    user: User;
-    date: Date;
+    author: User;
+    created_at: Date;
     likes: number;
     replies: number;
     retweets: number;
-    retweetedBy?: string;
-    hashtag?: string;
-    image?: string;
+    saves: number;
+    retweetedBy?: string | null;
+    hashtag?: string | null;
+    image?: string | null;
     onlyFollowers?: boolean;
     liked?: boolean;
     saved?: boolean;
     retweeted?: boolean;
-    reply?: { id: number; name: string };
+    replyTo?: { id: number; username: string } | null; // id - tweet
   }
 
   interface UserSettings extends User {
@@ -39,7 +40,7 @@ declare global {
 
   interface Trend {
     id: number;
-    name: string; // название тренда # автоматическая
+    hashtag: string; // название тренда # автоматическая
     //tweets: Tweet[]; // твиты по этому хештегу тренду хз
     tweets: number; // количество твитов по этому тренду хз
   }

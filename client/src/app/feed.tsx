@@ -10,13 +10,13 @@ export default function HomeFeed() {
     {
       id: 1,
       content: "Building the future with Next.js and Tailwind CSS! 🚀",
-      user: {
+      author: {
         id: 101,
         username: "tech_coder",
         image: "/temp/ (19).jpg",
         followed: true,
       },
-      date: new Date("2026-06-23T10:00:00Z"),
+      created_at: new Date("2026-06-23T10:00:00Z"),
       likes: 42,
       replies: 5,
       retweets: 12,
@@ -30,12 +30,12 @@ export default function HomeFeed() {
       id: 2,
       content:
         "Caught an incredible sunrise over the mountains this morning. Absolute perfection.",
-      user: {
+      author: {
         id: 102,
         username: "nature_wanderer",
         image: "/temp/ (11).jpg",
       },
-      date: new Date("2026-06-23T08:15:00Z"),
+      created_at: new Date("2026-06-23T08:15:00Z"),
       likes: 128,
       replies: 24,
       retweets: 35,
@@ -47,12 +47,12 @@ export default function HomeFeed() {
     {
       id: 3,
       content: "This is a private update exclusively for the inner circle.",
-      user: {
+      author: {
         id: 103,
         username: "secret_agent",
         followed: false,
       },
-      date: new Date("2026-06-22T22:30:00Z"),
+      created_at: new Date("2026-06-22T22:30:00Z"),
       likes: 12,
       replies: 2,
       retweets: 1,
@@ -65,13 +65,13 @@ export default function HomeFeed() {
       id: 4,
       content:
         "Check out this incredible open source tool I stumbled upon today!",
-      user: {
+      author: {
         id: 104,
         username: "dev_share",
         image: "/temp/ (1).jpg",
         followed: true,
       },
-      date: new Date("2026-06-23T14:45:00Z"),
+      created_at: new Date("2026-06-23T14:45:00Z"),
       likes: 85,
       replies: 8,
       retweets: 19,
@@ -84,11 +84,11 @@ export default function HomeFeed() {
     {
       id: 5,
       content: "Coffee secured. Code mode activated. Let's get to work.",
-      user: {
+      author: {
         id: 105,
         username: "coffee_bytes",
       },
-      date: new Date("2026-06-24T06:00:00Z"),
+      created_at: new Date("2026-06-24T06:00:00Z"),
       likes: 310,
       replies: 45,
       retweets: 88,
