@@ -1,4 +1,9 @@
+packages:
+  - "client"
+  - "server"
 allowBuilds:
+  bcrypt: true
+  esbuild: true
   sharp: true
   unrs-resolver: true
 ignoredBuiltDependencies:
