@@ -1,3 +1,11 @@
 {
-  "cSpell.words": ["citext", "NOCASE", "noprofile", "teispace", "unrs"]
+  "cSpell.words": [
+    "citext",
+    "NOCASE",
+    "noprofile",
+    "teispace",
+    "tursodatabase",
+    "unixepoch",
+    "unrs"
+  ]
 }
