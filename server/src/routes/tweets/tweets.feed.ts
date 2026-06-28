@@ -33,7 +33,16 @@ enum FILTER {
   tweets = "tweets",
   tweetsAndReplies = "tweetsAndReplies",
 }
-const PAGE_LIMIT = 5;
+
+enum ORDER {
+  top = "top", //by likes desc
+  new = "new", // by created_at desc
+  old = "old", //by created_at asc
+}
+
+const DEFAULT_PAGE_LIMIT = 5;
+const MAX_PAGE_LIMIT = 25;
+const MIN_PAGE_LIMIT = 1;
 
 const dbTweetSchema = z.object({
   tweet_id: z.number(),
@@ -108,7 +117,20 @@ const dbTweetToGlobalTweetSchema = dbTweetSchema
   )
   .array();
 
-const buildTweetQuery = () => {
+const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().positive().min(1).catch(1),
+  perPage: z.coerce
+    .number()
+    .int()
+    .positive()
+    .min(MIN_PAGE_LIMIT)
+    .max(MAX_PAGE_LIMIT)
+    .catch(DEFAULT_PAGE_LIMIT),
+});
+
+type PaginationInput = z.input<typeof paginationQuerySchema>;
+
+const buildTweetQuery = (includeRetweets?: boolean) => {
   const parent = alias(tweets, "reply_to");
   const parentAuthor = alias(users, "reply_to_author");
   const replyCounter = alias(tweets, "reply_counter");
@@ -137,19 +159,6 @@ const buildTweetQuery = () => {
           ELSE NULL
       END
       `,
-      // reply_to: sql<object | null>`
-      //     CASE
-      //       WHEN ${tweets.reply_to} IS NOT NULL THEN (
-      //           SELECT json_object(
-      //               ${tweets.tweet_id.name}, ${parent.tweet_id},
-      //               ${users.username.name}, ${parentAuthor.username}
-      //           )
-      //           FROM ${tweets} ${parent}
-      //           LEFT JOIN ${users} ${parentAuthor} USING(${sql.identifier(users.user_id.name)})
-      //           WHERE ${parent.tweet_id} = ${tweets.reply_to}
-      //       )
-      //       ELSE NULL
-      //     END`,
       is_liked: userId
         ? sql<boolean>`EXISTS(SELECT 1 FROM ${likes} WHERE ${likes.tweet_id} = ${tweets.tweet_id} AND ${likes.user_id} = ${userId})`
         : sql<boolean>`FALSE`,
@@ -163,7 +172,10 @@ const buildTweetQuery = () => {
       retweets_count: sql<number>`(SELECT COUNT(*) FROM ${retweets} WHERE ${retweets.tweet_id} = ${tweets.tweet_id})`,
       saves_count: sql<number>`(SELECT COUNT(*) FROM ${saves} WHERE ${saves.tweet_id} = ${tweets.tweet_id})`,
       replies_count: sql<number>`(SELECT COUNT(*) FROM ${tweets} ${replyCounter} WHERE ${replyCounter.reply_to} = ${tweets.tweet_id})`,
-
+      // likes_count: tweets.likes_count,
+      // retweets_count: tweets.retweets_count,
+      // saves_count: tweets.saves_count,
+      // replies_count: tweets.replies_count,
       hashtag: sql<any>`(
             SELECT (${hashtags.hashtag}) 
             FROM ${tweets_hashtags} 
@@ -173,13 +185,11 @@ const buildTweetQuery = () => {
             ORDER BY ${tweets_hashtags.created_at} DESC
             LIMIT 1
           )`,
-      //   retweeted_by: sql<string | null>`(
-      //     SELECT ${users.username}
-      //     FROM ${retweets}
-      //     LEFT JOIN ${users}
-      //     USING(${sql.identifier(users.user_id.name)})
-      //     WHERE ${retweets.tweet_id} = ${tweets.tweet_id}
-      //   )`,
+      retweeted_by: includeRetweets
+        ? sql<string>`
+
+          `
+        : sql<null>`NULL`,
     })
     .from(tweets)
     .innerJoin(users, eq(tweets.user_id, users.user_id))
@@ -190,9 +200,11 @@ const buildTweetQuery = () => {
 
 const pagination = <T extends SQLiteSelect>(
   db: T,
-  page: number = 1,
-  perPage: number = 1,
-) => db.limit(perPage).offset((page - 1) * perPage);
+  query: Partial<PaginationInput> = {},
+) => {
+  const { page, perPage } = paginationQuerySchema.parse(query);
+  return db.limit(perPage).offset((page - 1) * perPage);
+};
 
 // saved on /bookmarks + filters
 app.get("/bookmarks", async (c) => {
@@ -204,13 +216,11 @@ app.get("/bookmarks", async (c) => {
         saves,
         and(eq(tweets.tweet_id, saves.tweet_id), eq(saves.user_id, userId)),
       ),
-      Number(page),
+      { page, perPage: limit },
     ),
   );
   const end = performance.now();
-  console.log(`Execution time ${(end - start).toFixed(2)} ms`);
-  // const data: Tweet[] = dbTweetToGlobalTweetSchema.parse(
-  //   await
+  // console.log(`Execution time ${(end - start).toFixed(2)} ms`);
   return c.json(data);
 });
 
