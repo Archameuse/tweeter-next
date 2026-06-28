@@ -104,7 +104,7 @@ const buildTweetQuery = (fetchRetweets?: boolean) => {
         "saves_count",
       ),
     replies_count:
-      sql<number>`(SELECT COUNT(*) FROM ${tweets} ${replyCounter} WHERE ${replyCounter.reply_to} = ${tweets.tweet_id})`.as(
+      sql<number>`(SELECT COUNT(*) FROM ${tweets} AS ${replyCounter} WHERE ${replyCounter.reply_to} = ${tweets.tweet_id})`.as(
         "replies_count",
       ),
     // likes_count: tweets.likes_count.as('likes_count'),
@@ -146,6 +146,7 @@ const buildTweetQuery = (fetchRetweets?: boolean) => {
     .$dynamic();
 };
 
+/** should be used only with buildTweetQuery */
 const pagination = <T extends SQLiteSelect>(
   db: T,
   query: Partial<PaginationInput> = {},
@@ -163,16 +164,22 @@ const pagination = <T extends SQLiteSelect>(
     .offset((page - 1) * perPage);
 };
 
+/** should be used only with buildTweetQuery */
 const filters = <T extends SQLiteSelect>(
   db: T,
   query: Partial<FilterInput> = {},
 ) => {
   const { activeFilters, search, profileId, isRetweet, tweetId } =
     filterQuerySchema.parse(query);
+  const escapedSearch = z
+    .string()
+    .transform((val) => val.replace(/[%_]/g, "\\$&"))
+    .parse(search);
   const parent = alias(tweets, "reply_to");
+  const followed = alias(users, "followed_user");
   return db.where(
     and(
-      like(tweets.content, `%${search}%`), //search filter
+      like(tweets.content, `%${escapedSearch}%`), //search filter
       activeFilters.has(FILTER.media) //media filter
         ? and(isNotNull(tweets.image), ne(tweets.image, ""))
         : sql`TRUE`,
@@ -186,21 +193,30 @@ const filters = <T extends SQLiteSelect>(
       `
         : sql`TRUE`, //is profileId user liked this tweet filter
       activeFilters.has(FILTER.profileTweets) && profileId // profileId user own tweets or retweets
-        ? isRetweet
-          ? eq(retweets.user_id, profileId)
-          : eq(tweets.user_id, profileId)
-        : sql`TRUE`,
-      activeFilters.has(FILTER.profileReplies) && profileId // replies to profileId user tweets cant work with retweet
-        ? isRetweet
-          ? sql`FALSE`
-          : sql`
-        EXISTS (
-          SELECT 1 
-            FROM ${tweets} ${parent} 
-            WHERE ${parent.tweet_id} = ${tweets.reply_to}
-            AND ${parent.user_id} = ${profileId}  
-        )
-        `
+        ? or(
+            isRetweet
+              ? eq(retweets.user_id, profileId)
+              : or(
+                  eq(tweets.user_id, profileId),
+                  activeFilters.has(FILTER.profileReplies)
+                    ? and(
+                        eq(parent.tweet_id, tweets.reply_to),
+                        eq(parent.user_id, profileId),
+                      )
+                    : sql`FALSE`,
+                ),
+            activeFilters.has(FILTER.profileTweetsFollowed)
+              ? sql`
+                  EXISTS (
+                  SELECT 1
+                  FROM ${follows}
+                  INNER JOIN ${users} AS ${followed}
+                  ON ${follows.followed_id} = ${followed.user_id}
+                  WHERE ${follows.follower_id} = ${profileId}
+                  AND ${!isRetweet ? tweets.user_id : retweets.user_id} = ${followed.user_id}
+                )`
+              : sql`FALSE`,
+          )
         : sql`TRUE`,
       activeFilters.has(FILTER.tweetReplies) && tweetId
         ? isRetweet
@@ -270,7 +286,11 @@ app.get("/user", async (c) => {
       })
       .parse(id) ?? userId;
   // if no id passed in query then fallback to current logged in user or crash
-  const activeFilters = new Set([FILTER.profileTweets, processedScope]);
+  const activeFilters = new Set([
+    FILTER.profileTweets,
+    FILTER.profileTweetsFollowed,
+    processedScope,
+  ]);
   const data = dbTweetToGlobalTweetSchema.parse(
     await pagination(
       activeFilters.has(FILTER.profileReplies)

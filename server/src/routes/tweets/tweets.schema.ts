@@ -10,6 +10,7 @@ export enum FILTER {
   likes = "likes",
   profileTweets = "tweets",
   profileReplies = "replies",
+  profileTweetsFollowed = "followedTweets",
   tweetReplies = "tweet-replies",
 }
 
