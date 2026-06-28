@@ -10,7 +10,7 @@ import {
   users,
 } from "@/db/schema.js";
 import { and, count, eq, isNotNull, SelectedFields, sql } from "drizzle-orm";
-import { alias } from "drizzle-orm/sqlite-core";
+import { alias, SQLiteSelect } from "drizzle-orm/sqlite-core";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
@@ -108,56 +108,63 @@ const dbTweetToGlobalTweetSchema = dbTweetSchema
   )
   .array();
 
-// saved on /bookmarks + filters
-app.get("/bookmarks", async (c) => {
-  const { page, filter, limit } = c.req.query();
+const buildTweetQuery = () => {
   const parent = alias(tweets, "reply_to");
   const parentAuthor = alias(users, "reply_to_author");
   const replyCounter = alias(tweets, "reply_counter");
-  const data: Tweet[] = dbTweetToGlobalTweetSchema.parse(
-    await db
-      .select({
-        tweet_id: tweets.tweet_id,
-        content: tweets.content,
-        image: tweets.image,
-        created_at: tweets.created_at,
-        only_followers: tweets.only_followers,
-        author: {
-          user_id: users.user_id,
-          username: users.username,
-          is_followed: userId
-            ? sql<boolean>`EXISTS(SELECT 1 FROM ${follows} WHERE ${follows.follower_id} = ${userId} AND ${follows.followed_id} = ${tweets.user_id})`
-            : sql<boolean>`FALSE`,
-          avatar: users.avatar,
-        },
-        reply_to: sql<object | null>`
-          CASE
-            WHEN ${tweets.reply_to} IS NOT NULL THEN (
-                SELECT json_object(
-                    ${tweets.tweet_id.name}, ${parent.tweet_id},
-                    ${users.username.name}, ${parentAuthor.username}
-                )
-                FROM ${tweets} ${parent}
-                LEFT JOIN ${users} ${parentAuthor} USING(${sql.identifier(users.user_id.name)})
-                WHERE ${parent.tweet_id} = ${tweets.reply_to}
-            )
-            ELSE NULL 
-          END`,
-        is_liked: userId
-          ? sql<boolean>`EXISTS(SELECT 1 FROM ${likes} WHERE ${likes.tweet_id} = ${tweets.tweet_id} AND ${likes.user_id} = ${userId})`
+  return db
+    .select({
+      tweet_id: tweets.tweet_id,
+      content: tweets.content,
+      image: tweets.image,
+      created_at: tweets.created_at,
+      only_followers: tweets.only_followers,
+      author: {
+        user_id: users.user_id,
+        username: users.username,
+        is_followed: userId
+          ? sql<boolean>`EXISTS(SELECT 1 FROM ${follows} WHERE ${follows.follower_id} = ${userId} AND ${follows.followed_id} = ${tweets.user_id})`
           : sql<boolean>`FALSE`,
-        is_retweeted: userId
-          ? sql<boolean>`EXISTS(SELECT 1 FROM ${retweets} WHERE ${retweets.tweet_id} = ${tweets.tweet_id} AND ${retweets.user_id} = ${userId})`
-          : sql<boolean>`FALSE`,
-        is_saved: userId
-          ? sql<boolean>`EXISTS(SELECT 1 FROM ${saves} WHERE ${saves.tweet_id} = ${tweets.tweet_id} AND ${saves.user_id} = ${userId})`
-          : sql<boolean>`FALSE`,
-        likes_count: sql<number>`(SELECT COUNT(${likes.tweet_id}) FROM ${likes} WHERE ${likes.tweet_id} = ${tweets.tweet_id})`,
-        retweets_count: sql<number>`(SELECT COUNT(${retweets.tweet_id}) FROM ${retweets} WHERE ${retweets.tweet_id} = ${tweets.tweet_id})`,
-        saves_count: sql<number>`(SELECT COUNT(${saves.tweet_id}) FROM ${saves} WHERE ${saves.tweet_id} = ${tweets.tweet_id})`,
-        replies_count: sql<number>`(SELECT COUNT(${tweets.tweet_id}) FROM ${tweets} ${replyCounter} WHERE ${replyCounter.reply_to} = ${tweets.tweet_id})`,
+        avatar: users.avatar,
+      },
+      reply_to: sql<string | null>`
+      CASE
+        WHEN ${tweets.reply_to} IS NOT NULL
+          THEN json_object(
+            ${tweets.tweet_id.name}, ${parent.tweet_id},
+            ${users.username.name}, ${parentAuthor.username}
+          )
+          ELSE NULL
+      END
+      `,
+      // reply_to: sql<object | null>`
+      //     CASE
+      //       WHEN ${tweets.reply_to} IS NOT NULL THEN (
+      //           SELECT json_object(
+      //               ${tweets.tweet_id.name}, ${parent.tweet_id},
+      //               ${users.username.name}, ${parentAuthor.username}
+      //           )
+      //           FROM ${tweets} ${parent}
+      //           LEFT JOIN ${users} ${parentAuthor} USING(${sql.identifier(users.user_id.name)})
+      //           WHERE ${parent.tweet_id} = ${tweets.reply_to}
+      //       )
+      //       ELSE NULL
+      //     END`,
+      is_liked: userId
+        ? sql<boolean>`EXISTS(SELECT 1 FROM ${likes} WHERE ${likes.tweet_id} = ${tweets.tweet_id} AND ${likes.user_id} = ${userId})`
+        : sql<boolean>`FALSE`,
+      is_retweeted: userId
+        ? sql<boolean>`EXISTS(SELECT 1 FROM ${retweets} WHERE ${retweets.tweet_id} = ${tweets.tweet_id} AND ${retweets.user_id} = ${userId})`
+        : sql<boolean>`FALSE`,
+      is_saved: userId
+        ? sql<boolean>`EXISTS(SELECT 1 FROM ${saves} WHERE ${saves.tweet_id} = ${tweets.tweet_id} AND ${saves.user_id} = ${userId})`
+        : sql<boolean>`FALSE`,
+      likes_count: sql<number>`(SELECT COUNT(*) FROM ${likes} WHERE ${likes.tweet_id} = ${tweets.tweet_id})`,
+      retweets_count: sql<number>`(SELECT COUNT(*) FROM ${retweets} WHERE ${retweets.tweet_id} = ${tweets.tweet_id})`,
+      saves_count: sql<number>`(SELECT COUNT(*) FROM ${saves} WHERE ${saves.tweet_id} = ${tweets.tweet_id})`,
+      replies_count: sql<number>`(SELECT COUNT(*) FROM ${tweets} ${replyCounter} WHERE ${replyCounter.reply_to} = ${tweets.tweet_id})`,
 
-        hashtag: sql<any>`(
+      hashtag: sql<any>`(
             SELECT (${hashtags.hashtag}) 
             FROM ${tweets_hashtags} 
             LEFT JOIN ${hashtags} 
@@ -166,21 +173,44 @@ app.get("/bookmarks", async (c) => {
             ORDER BY ${tweets_hashtags.created_at} DESC
             LIMIT 1
           )`,
-        //   retweeted_by: sql<string | null>`(
-        //     SELECT ${users.username}
-        //     FROM ${retweets}
-        //     LEFT JOIN ${users}
-        //     USING(${sql.identifier(users.user_id.name)})
-        //     WHERE ${retweets.tweet_id} = ${tweets.tweet_id}
-        //   )`,
-      })
-      .from(tweets)
-      .innerJoin(users, eq(tweets.user_id, users.user_id))
-      .innerJoin(
+      //   retweeted_by: sql<string | null>`(
+      //     SELECT ${users.username}
+      //     FROM ${retweets}
+      //     LEFT JOIN ${users}
+      //     USING(${sql.identifier(users.user_id.name)})
+      //     WHERE ${retweets.tweet_id} = ${tweets.tweet_id}
+      //   )`,
+    })
+    .from(tweets)
+    .innerJoin(users, eq(tweets.user_id, users.user_id))
+    .leftJoin(parent, eq(parent.tweet_id, tweets.reply_to))
+    .leftJoin(parentAuthor, eq(parentAuthor.user_id, parent.user_id))
+    .$dynamic();
+};
+
+const pagination = <T extends SQLiteSelect>(
+  db: T,
+  page: number = 1,
+  perPage: number = 1,
+) => db.limit(perPage).offset((page - 1) * perPage);
+
+// saved on /bookmarks + filters
+app.get("/bookmarks", async (c) => {
+  const { page, filter, limit } = c.req.query();
+  const start = performance.now();
+  const data: Tweet[] = dbTweetToGlobalTweetSchema.parse(
+    await pagination(
+      buildTweetQuery().innerJoin(
         saves,
         and(eq(tweets.tweet_id, saves.tweet_id), eq(saves.user_id, userId)),
       ),
+      Number(page),
+    ),
   );
+  const end = performance.now();
+  console.log(`Execution time ${(end - start).toFixed(2)} ms`);
+  // const data: Tweet[] = dbTweetToGlobalTweetSchema.parse(
+  //   await
   return c.json(data);
 });
 

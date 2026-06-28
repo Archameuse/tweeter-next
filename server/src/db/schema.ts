@@ -112,6 +112,18 @@ export const tweets = sqliteTable(
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
+    likes_count: integer("likes_count", { mode: "number" })
+      .notNull()
+      .default(0),
+    replies_count: integer("replies_count", { mode: "number" })
+      .notNull()
+      .default(0),
+    retweets_count: integer("retweets_count", { mode: "number" })
+      .notNull()
+      .default(0),
+    saves_count: integer("saves_count", { mode: "number" })
+      .notNull()
+      .default(0),
   },
   (table) => [
     foreignKey({ columns: [table.reply_to], foreignColumns: [table.tweet_id] })
@@ -127,6 +139,9 @@ export const hashtags = sqliteTable(
       autoIncrement: true,
     }),
     hashtag: text("hashtag", { length: 64, mode: "text" }).notNull().unique(),
+    tweets_count: integer("tweets_count", { mode: "number" })
+      .notNull()
+      .default(0),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
