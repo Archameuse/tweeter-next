@@ -20,6 +20,12 @@ export enum ORDER {
   old = "old", //by created_at asc
 }
 
+export enum ACTION {
+  like,
+  retweet,
+  save,
+}
+
 export const dbTweetSchema = z.object({
   tweet_id: z.number(),
   content: z.string(),
@@ -142,5 +148,14 @@ export const dbTrendsToGlobalTrendsSchema = dbTrendsSchema
   )
   .array();
 
+export const tweetExistsAndActionQuerySchema = z.object({
+  tweetId: z.coerce.number().min(1).int(),
+  userId: z.coerce.number().min(1).int(),
+  action: z.enum(ACTION),
+});
+
 export type PaginationInput = z.input<typeof paginationQuerySchema>;
 export type FilterInput = z.input<typeof filterQuerySchema>;
+export type TweetExistsAndActionInput = z.input<
+  typeof tweetExistsAndActionQuerySchema
+>;
