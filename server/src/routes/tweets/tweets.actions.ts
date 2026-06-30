@@ -1,16 +1,32 @@
 import { db } from "@/db/index.js";
-import { likes, retweets, saves, tweets } from "@/db/schema.js";
-import { and, eq, sql } from "drizzle-orm";
+import {
+  follows,
+  hashtags,
+  likes,
+  retweets,
+  saves,
+  tweets,
+  tweets_hashtags,
+  users,
+} from "@/db/schema.js";
+import { and, eq, like, sql } from "drizzle-orm";
 import { SQLiteTransaction } from "drizzle-orm/sqlite-core";
 import { Hono } from "hono";
 import z from "zod";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import {
   ACTION,
+  dbTweetToGlobalTweetSchema,
+  DbTweetType,
+  globalTweetSchema,
+  globalTweetToDbTweetSchema,
   TweetExistsAndActionInput,
   tweetExistsAndActionQuerySchema,
 } from "./tweets.schema.js";
 import { HTTPException } from "hono/http-exception";
+import uploadImage from "@/utils/uploadImage.js";
+import { imageSchema } from "@/schema.js";
+import { text } from "drizzle-orm/singlestore-core/columns/text";
 
 const app = new Hono();
 
@@ -260,6 +276,132 @@ app.delete("/saves/:id{\\d+}", async (c) => {
   return c.body(null, 204);
 });
 
-// main -> post (no delete, delete would only be on user page user profile)
+//temporary for testing purposes
+app.get("/test-form", (c) => {
+  const mockTweet: TweetInput = {
+    content: "some text",
+    hashtag: "idkTag",
+  };
+  return c.html(`
+    <!DOCTYPE html>
+    <html>
+      <head><title>Test Tweet</title></head>
+      <body>
+        <form action="/tweets" method="POST" enctype="multipart/form-data">
+          <textarea name="content" placeholder="What's happening?" required>${JSON.stringify(mockTweet)}</textarea><br/>
+          <input type="file" name="image" accept="image/*" /><br/>
+          <button type="submit">Tweet</button>
+        </form>
+      </body>
+    </html>
+  `);
+});
+
+// main -> post
+app.post("/", async (c) => {
+  const formData = await c.req.formData();
+  const { hashtag, ...rawTweetData } = globalTweetSchema.parse(
+    formData.get("content"),
+  );
+  const tweetData = globalTweetToDbTweetSchema(userId).parse(rawTweetData);
+  const imageFile = imageSchema.parse(formData.get("image"));
+  if (imageFile) tweetData.image = await uploadImage(imageFile);
+  const response = await db.transaction(async (tx) => {
+    const tweetAuthor = await tx.query.users.findFirst({
+      columns: {
+        user_id: true,
+        avatar: true,
+        username: true,
+      },
+      where: { user_id: tweetData.user_id },
+      extras: { is_followed: sql<false>`FALSE` },
+    });
+    if (!tweetAuthor) {
+      throw new HTTPException(404, {
+        message: `User with id #${tweetData.user_id} that tries to create a tweet can't be found in database`,
+      });
+    }
+    let hashtagId: number | undefined;
+    let replyTweetData;
+    // if we have replyTo -> check that such tweet exists or 404
+    if (tweetData.reply_to) {
+      replyTweetData = await tx.query.tweets.findFirst({
+        columns: {},
+        extras: {
+          is_followed: sql<boolean>`EXISTS (
+            SELECT 1 FROM ${follows} 
+            WHERE ${follows.follower_id} = ${tweetData.reply_to} 
+            AND ${follows.followed_id} = ${tweetData.user_id})`.as(
+            "is_followed",
+          ),
+        },
+        with: {
+          author: { columns: { user_id: true, username: true, avatar: true } },
+        },
+        where: { tweet_id: tweetData.reply_to },
+      });
+      if (!replyTweetData) {
+        throw new HTTPException(404, {
+          message: `Tweet with id #${tweetData.reply_to} you are trying to reply to does not exists`,
+        });
+      }
+    }
+    // try to create tweet with data we have, return its id
+    const [insertedTweet] = await tx
+      .insert(tweets)
+      .values(tweetData)
+      .returning();
+    if (!insertedTweet) {
+      throw new HTTPException(500, {
+        message:
+          "Tweet was inserted inside transaction but for whatever reason nothing was returned, realistically this should never happen but typescript need this validation",
+      });
+    }
+
+    // if we have hashtag -> try to insert it with upset -> try to return its id
+    if (hashtag) {
+      hashtagId = (
+        await tx
+          .insert(hashtags)
+          .values({
+            hashtag,
+          })
+          .onConflictDoUpdate({
+            target: hashtags.hashtag_guard,
+            set: { hashtag: sql.raw(`excluded.${hashtags.hashtag.name}`) },
+          })
+          .returning({ hashtag_id: hashtags.hashtag_id })
+      )[0]?.hashtag_id;
+      // if we have don't have hashtag id throw an error
+      if (!hashtagId) {
+        throw new HTTPException(500, {
+          message:
+            "For some reason hashtag was not inserted, remove hashtag or change it and try again",
+        });
+      }
+      // insert tweets_hashtags hashtag id and created tweet id
+      await tx
+        .insert(tweets_hashtags)
+        .values({ tweet_id: insertedTweet.tweet_id, hashtag_id: hashtagId });
+      // update hashtag id tweets count + 1
+      await tx
+        .update(hashtags)
+        .set({
+          tweets_count: sql<number>`${hashtags.tweets_count} + 1`,
+        })
+        .where(eq(hashtags.hashtag_id, hashtagId));
+    }
+    return dbTweetToGlobalTweetSchema.parse({
+      ...insertedTweet,
+      author: tweetAuthor,
+      reply_to_author: replyTweetData && {
+        ...replyTweetData.author,
+        is_followed: replyTweetData.is_followed,
+      },
+      hashtag,
+    });
+  });
+  return c.json(response);
+});
 
 export default app;

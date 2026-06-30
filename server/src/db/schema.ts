@@ -1,4 +1,4 @@
-import { defineRelations, sql } from "drizzle-orm";
+import { defineRelations, SQL, sql } from "drizzle-orm";
 import {
   check,
   customType,
@@ -21,10 +21,19 @@ export const users = sqliteTable(
     user_id: integer("user_id", { mode: "number" }).primaryKey({
       autoIncrement: true,
     }),
-    email: citext("email").notNull().unique(),
+    email: text("email").notNull().unique(),
+    email_guard: text("email_guard")
+      .unique()
+      .generatedAlwaysAs((): SQL => sql`lower(${users.email})`, {
+        mode: "virtual",
+      }),
     password: text("password", { mode: "text" }).notNull(),
-    username: text("username", { mode: "text" }).notNull(),
-    username_guard: citext("username_guard").notNull().unique(),
+    username: text("username", { mode: "text" }).notNull().unique(),
+    username_guard: text("username_guard")
+      .unique()
+      .generatedAlwaysAs((): SQL => sql`lower(${users.username})`, {
+        mode: "virtual",
+      }),
     status: text("status", { mode: "text" }),
     avatar: text("avatar", { mode: "text" }),
     banner: text("banner", { mode: "text" }),
@@ -42,10 +51,6 @@ export const users = sqliteTable(
       sql`${table.username} NOT LIKE '% ' 
       AND ${table.username} NOT LIKE ' %'
       AND (length(${table.username}) - length(replace(${table.username}, ' ',''))) <= 1`,
-    ),
-    check(
-      "username_guard_validation_check",
-      sql`${table.username_guard} = lower(${table.username})`,
     ),
   ],
 );
@@ -139,6 +144,11 @@ export const hashtags = sqliteTable(
       autoIncrement: true,
     }),
     hashtag: text("hashtag", { length: 64, mode: "text" }).notNull().unique(),
+    hashtag_guard: text("hashtag_guard", { length: 64, mode: "text" })
+      .unique()
+      .generatedAlwaysAs((): SQL => sql`lower(${hashtags.hashtag})`, {
+        mode: "virtual",
+      }),
     tweets_count: integer("tweets_count", { mode: "number" })
       .notNull()
       .default(0),
@@ -150,7 +160,9 @@ export const hashtags = sqliteTable(
     check(
       "hashtag_validation_check",
       sql`length(${table.hashtag}) > 0
-      AND length(${table.hashtag}) <= 64`,
+      AND length(${table.hashtag}) <= 64
+      AND instr(${table.hashtag}, ' ') = 0
+      `,
     ),
   ],
 );

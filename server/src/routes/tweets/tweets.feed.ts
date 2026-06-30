@@ -36,6 +36,7 @@ import {
   PaginationInput,
   paginationQuerySchema,
 } from "./tweets.schema.js";
+import { idSchema } from "@/schema.js";
 
 const app = new Hono();
 
@@ -119,16 +120,18 @@ const buildTweetQuery = (fetchRetweets?: boolean) => {
             WHERE ${tweets_hashtags.tweet_id} = ${tweets.tweet_id}
             ORDER BY ${tweets_hashtags.created_at} DESC
             LIMIT 1
-          )`,
-    retweeted_by: sql<string | null>`NULL`,
-    created_at: sql<Date>`${tweets.created_at}`,
+          )`.as("hashtag"),
+    retweeted_by: sql<string | null>`NULL`.as("retweeted_by"),
+    created_at: sql<Date>`${tweets.created_at}`.as("created_at"),
   };
   if (fetchRetweets)
     return db
       .select({
         ...sharedSelect,
-        created_at: sql<Date>`${retweets.created_at}`,
-        retweeted_by: sql<string | null>`${retweetedBy.username}`,
+        created_at: sql<Date>`${retweets.created_at}`.as("created_at"),
+        retweeted_by: sql<string | null>`${retweetedBy.username}`.as(
+          "retweeted_by",
+        ),
       })
       .from(retweets)
       .innerJoin(tweets, eq(retweets.tweet_id, tweets.tweet_id))
@@ -230,18 +233,24 @@ const filters = <T extends SQLiteSelect>(
 // saved on /bookmarks + filters
 app.get("/bookmarks", async (c) => {
   const { page, scope, limit } = c.req.query();
-  const data: Tweet[] = dbTweetToGlobalTweetSchema.parse(
-    await pagination(
-      filters(
-        buildTweetQuery().innerJoin(
-          saves,
-          and(eq(tweets.tweet_id, saves.tweet_id), eq(saves.user_id, userId)),
+  const parsedUserId = idSchema.transform(Number).parse(userId);
+  const data: Tweet[] = dbTweetToGlobalTweetSchema
+    .array()
+    .parse(
+      await pagination(
+        filters(
+          buildTweetQuery().innerJoin(
+            saves,
+            and(
+              eq(tweets.tweet_id, saves.tweet_id),
+              eq(saves.user_id, parsedUserId),
+            ),
+          ),
+          { activeFilters: new Set([scope]) },
         ),
-        { activeFilters: new Set([scope]) },
+        { page, perPage: limit, orderBy: scope },
       ),
-      { page, perPage: limit, orderBy: scope },
-    ),
-  );
+    );
   return c.json(data);
 });
 
@@ -249,7 +258,7 @@ app.get("/bookmarks", async (c) => {
 app.get("/explore", async (c) => {
   const { page, scope, limit, q } = c.req.query();
 
-  const data = dbTweetToGlobalTweetSchema.parse(
+  const data = dbTweetToGlobalTweetSchema.array().parse(
     await pagination(
       filters(buildTweetQuery(), {
         activeFilters: new Set([scope]),
@@ -276,22 +285,29 @@ app.get("/user", async (c) => {
     .catch(FILTER.profileTweets)
     .parse(scope);
   const processedId =
-    z.coerce
-      .number()
-      .int()
-      .min(1)
+    idSchema
       .optional()
       .refine((val) => val || userId, {
         error: 'You need to get authenticated to view "home" feed',
       })
       .parse(id) ?? userId;
+  // const processedId =
+  //   z.coerce
+  //     .number()
+  //     .int()
+  //     .min(1)
+  //     .optional()
+  //     .refine((val) => val || userId, {
+  //       error: 'You need to get authenticated to view "home" feed',
+  //     })
+  //     .parse(id) ?? userId;
   // if no id passed in query then fallback to current logged in user or crash
   const activeFilters = new Set([
     FILTER.profileTweets,
     FILTER.profileTweetsFollowed,
     processedScope,
   ]);
-  const data = dbTweetToGlobalTweetSchema.parse(
+  const data = dbTweetToGlobalTweetSchema.array().parse(
     await pagination(
       activeFilters.has(FILTER.profileReplies)
         ? filters(buildTweetQuery(false), {
@@ -319,8 +335,8 @@ app.get("/user", async (c) => {
 app.get("/replies/:id", async (c) => {
   const { id } = c.req.param();
   const { page, limit } = c.req.query();
-  const processedId = z.coerce.number().int().min(1).parse(id);
-  const data = dbTweetToGlobalTweetSchema.parse(
+  const processedId = idSchema.parse(id);
+  const data = dbTweetToGlobalTweetSchema.array().parse(
     await pagination(
       filters(buildTweetQuery(), {
         tweetId: processedId,

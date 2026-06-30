@@ -2,7 +2,7 @@ export {};
 
 declare global {
   interface User {
-    id: number;
+    id: string;
     username: string;
     avatar?: string | null;
     followed?: boolean;
@@ -11,7 +11,7 @@ declare global {
   }
 
   interface Tweet {
-    id: number;
+    id: string;
     content: string;
     author: User;
     created_at: Date;
@@ -26,7 +26,14 @@ declare global {
     liked?: boolean;
     saved?: boolean;
     retweeted?: boolean;
-    replyTo?: { id: number; username: string } | null; // id - tweet
+    replyTo?: { id: string; username: string } | null; // id - tweet
+  }
+
+  interface TweetInput extends Pick<
+    Tweet,
+    "content" | "hashtag" | "onlyFollowers"
+  > {
+    replyTo?: number | string | null;
   }
 
   interface UserSettings extends User {
@@ -39,7 +46,7 @@ declare global {
   }
 
   interface Trend {
-    id: number;
+    id: string;
     hashtag: string; // название тренда # автоматическая
     //tweets: Tweet[]; // твиты по этому хештегу тренду хз
     tweets: number; // количество твитов по этому тренду хз
