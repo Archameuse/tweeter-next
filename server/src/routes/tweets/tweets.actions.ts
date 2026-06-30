@@ -277,25 +277,25 @@ app.delete("/saves/:id{\\d+}", async (c) => {
 });
 
 //temporary for testing purposes
-app.get("/test-form", (c) => {
-  const mockTweet: TweetInput = {
-    content: "some text",
-    hashtag: "idkTag",
-  };
-  return c.html(`
-    <!DOCTYPE html>
-    <html>
-      <head><title>Test Tweet</title></head>
-      <body>
-        <form action="/tweets" method="POST" enctype="multipart/form-data">
-          <textarea name="content" placeholder="What's happening?" required>${JSON.stringify(mockTweet)}</textarea><br/>
-          <input type="file" name="image" accept="image/*" /><br/>
-          <button type="submit">Tweet</button>
-        </form>
-      </body>
-    </html>
-  `);
-});
+// app.get("/test-form", (c) => {
+//   const mockTweet: TweetInput = {
+//     content: "some text",
+//     hashtag: "idkTag",
+//   };
+//   return c.html(`
+//     <!DOCTYPE html>
+//     <html>
+//       <head><title>Test Tweet</title></head>
+//       <body>
+//         <form action="/tweets" method="POST" enctype="multipart/form-data">
+//           <textarea name="content" placeholder="What's happening?" required>${JSON.stringify(mockTweet)}</textarea><br/>
+//           <input type="file" name="image" accept="image/*" /><br/>
+//           <button type="submit">Tweet</button>
+//         </form>
+//       </body>
+//     </html>
+//   `);
+// });
 
 // main -> post
 app.post("/", async (c) => {

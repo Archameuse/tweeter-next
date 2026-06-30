@@ -8,7 +8,7 @@
 
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import userRoutes from "@/routes/user.js";
+import userRoutes from "@/routes/users/users.routes.js";
 import tweetsRoutes from "@/routes/tweets/tweets.routes.js";
 import { HTTPException } from "hono/http-exception";
 import z, { ZodError } from "zod";
