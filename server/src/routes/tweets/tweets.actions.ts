@@ -326,17 +326,9 @@ app.post("/", async (c) => {
     // if we have replyTo -> check that such tweet exists or 404
     if (tweetData.reply_to) {
       replyTweetData = await tx.query.tweets.findFirst({
-        columns: {},
-        extras: {
-          is_followed: sql<boolean>`EXISTS (
-            SELECT 1 FROM ${follows} 
-            WHERE ${follows.follower_id} = ${tweetData.reply_to} 
-            AND ${follows.followed_id} = ${tweetData.user_id})`.as(
-            "is_followed",
-          ),
-        },
+        columns: { tweet_id: true },
         with: {
-          author: { columns: { user_id: true, username: true, avatar: true } },
+          author: { columns: { username: true } },
         },
         where: { tweet_id: tweetData.reply_to },
       });
@@ -395,8 +387,8 @@ app.post("/", async (c) => {
       ...insertedTweet,
       author: tweetAuthor,
       reply_to_author: replyTweetData && {
-        ...replyTweetData.author,
-        is_followed: replyTweetData.is_followed,
+        tweet_id: replyTweetData.tweet_id,
+        username: replyTweetData.author.username,
       },
       hashtag,
     });
