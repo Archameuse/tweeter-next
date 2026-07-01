@@ -332,9 +332,13 @@ app.get("/user", async (c) => {
 });
 
 // replies /replies/:id list of tweets that are replying to this specific id open through modal
-app.get("/replies/:id", async (c) => {
-  const { id } = c.req.param();
-  const { page, limit } = c.req.query();
+app.get("/replies", async (c) => {
+  const { id, page, limit } = c.req.query();
+  if (!id)
+    throw new HTTPException(400, {
+      message:
+        "Please provide id of the tweet you are trying to fetch replies to",
+    });
   const processedId = idSchema.parse(id);
   const data = dbTweetToGlobalTweetSchema.array().parse(
     await pagination(

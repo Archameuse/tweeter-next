@@ -3,6 +3,7 @@ import {
   check,
   customType,
   foreignKey,
+  index,
   integer,
   primaryKey,
   sqliteTable,
@@ -92,6 +93,10 @@ export const follows = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.follower_id, table.followed_id] }),
+    index("follows_followed_id_follower_id_index").on(
+      table.followed_id,
+      table.follower_id,
+    ),
     check(
       "self_follow_validation_check",
       sql`${table.follower_id} <> ${table.followed_id}`,

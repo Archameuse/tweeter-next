@@ -37,8 +37,8 @@ declare global {
   }
 
   interface UserSettings extends User {
-    banner?: string;
-    status?: string;
+    banner?: string | null;
+    status?: string | null;
   }
   interface Profile extends UserSettings {
     followers: number;

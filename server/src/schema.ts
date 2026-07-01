@@ -17,3 +17,7 @@ export const idSchema = z.coerce
   .string()
   .trim()
   .regex(/^\d+$/, { error: "Id must contain only and at least 1 digits" });
+
+export const idNumberSchema = idSchema
+  .transform(Number)
+  .pipe(z.number().min(1).int());

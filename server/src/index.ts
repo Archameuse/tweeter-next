@@ -34,7 +34,7 @@ app.onError((err, c) => {
   return c.json({ message: "Internal Server Error" }, 500);
 });
 
-app.route("/user", userRoutes);
+app.route("/users", userRoutes);
 app.route("/tweets", tweetsRoutes);
 
 serve(
