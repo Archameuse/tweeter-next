@@ -37,6 +37,7 @@ import {
   paginationQuerySchema,
 } from "./tweets.schema.js";
 import { idSchema } from "@/schema.js";
+import { MissingIdError } from "@/utils/standardErrors.js";
 
 const app = new Hono();
 
@@ -334,11 +335,7 @@ app.get("/user", async (c) => {
 // replies /replies/:id list of tweets that are replying to this specific id open through modal
 app.get("/replies", async (c) => {
   const { id, page, limit } = c.req.query();
-  if (!id)
-    throw new HTTPException(400, {
-      message:
-        "Please provide id of the tweet you are trying to fetch replies to",
-    });
+  if (!id) throw new MissingIdError();
   const processedId = idSchema.parse(id);
   const data = dbTweetToGlobalTweetSchema.array().parse(
     await pagination(

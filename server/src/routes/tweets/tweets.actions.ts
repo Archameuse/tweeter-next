@@ -27,6 +27,7 @@ import { HTTPException } from "hono/http-exception";
 import uploadImage from "@/utils/uploadImage.js";
 import { imageSchema } from "@/schema.js";
 import { text } from "drizzle-orm/singlestore-core/columns/text";
+import { Tweet404Error } from "@/utils/standardErrors.js";
 
 const app = new Hono();
 
@@ -86,9 +87,7 @@ app.post("/likes/:id{\\d+}", async (c) => {
       userId,
     });
     if (!exists) {
-      throw new HTTPException(404, {
-        message: `Tweet with id #${tweetId} does not exist`,
-      });
+      throw new Tweet404Error(tweetId);
     }
     if (exists.isLiked) {
       throw new HTTPException(409, {
@@ -120,9 +119,7 @@ app.delete("/likes/:id{\\d+}", async (c) => {
       userId,
     });
     if (!exists) {
-      throw new HTTPException(404, {
-        message: `Tweet with id #${tweetId} does not exist`,
-      });
+      throw new Tweet404Error(tweetId);
     }
     if (!exists.isLiked) {
       throw new HTTPException(409, {
@@ -153,9 +150,7 @@ app.post("/retweets/:id{\\d+}", async (c) => {
       userId,
     });
     if (!exists) {
-      throw new HTTPException(404, {
-        message: `Tweet with id #${tweetId} does not exist`,
-      });
+      throw new Tweet404Error(tweetId);
     }
     if (exists.isRetweeted) {
       throw new HTTPException(409, {
@@ -187,9 +182,7 @@ app.delete("/retweets/:id{\\d+}", async (c) => {
       userId,
     });
     if (!exists) {
-      throw new HTTPException(404, {
-        message: `Tweet with id #${tweetId} does not exist`,
-      });
+      throw new Tweet404Error(tweetId);
     }
     if (!exists.isRetweeted) {
       throw new HTTPException(409, {
@@ -220,9 +213,7 @@ app.post("/saves/:id{\\d+}", async (c) => {
       userId,
     });
     if (!exists) {
-      throw new HTTPException(404, {
-        message: `Tweet with id #${tweetId} does not exist`,
-      });
+      throw new Tweet404Error(404);
     }
     if (exists.isSaved) {
       throw new HTTPException(409, {
@@ -254,9 +245,7 @@ app.delete("/saves/:id{\\d+}", async (c) => {
       userId,
     });
     if (!exists) {
-      throw new HTTPException(404, {
-        message: `Tweet with id #${tweetId} does not exist`,
-      });
+      throw new Tweet404Error(404);
     }
     if (!exists.isSaved) {
       throw new HTTPException(409, {
@@ -333,9 +322,7 @@ app.post("/", async (c) => {
         where: { tweet_id: tweetData.reply_to },
       });
       if (!replyTweetData) {
-        throw new HTTPException(404, {
-          message: `Tweet with id #${tweetData.reply_to} you are trying to reply to does not exists`,
-        });
+        throw new Tweet404Error(404, true);
       }
     }
     // try to create tweet with data we have, return its id

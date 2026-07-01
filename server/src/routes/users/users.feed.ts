@@ -5,81 +5,26 @@ import { desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import z from "zod";
+import {
+  dbProfileToGlobalProfileSchema,
+  dbUserSettingsSchema,
+  dbUserToGlobalUserSchema,
+  FOLLOW_SCOPE,
+  USER_SCOPE,
+} from "./users.schema.js";
+import { MissingIdError } from "@/utils/standardErrors.js";
 
 const app = new Hono();
 
-enum USER_SCOPE {
-  user = "user",
-  settings = "settings",
-  profile = "profile",
-}
-
-enum FOLLOW_SCOPE {
-  followers = "followers",
-  follows = "follows",
-}
-
+const mockUserId = 1;
 const MIN_PAGE_LIMIT = 5;
 const MAX_PAGE_LIMIT = 15;
 const DEFAULT_PAGE_LIMIT = 10;
 
-const mockUserId = 1;
-
-const dbUserSchema = z.object({
-  user_id: idSchema,
-  username: z.string(),
-  avatar: z.string().nullish(),
-  is_followed: z.coerce.boolean().optional(),
-});
-
-const dbUserToGlobalUserSchema = dbUserSchema.transform(
-  (db): User => ({
-    id: db.user_id,
-    username: db.username,
-    avatar: db.avatar,
-    followed: db.is_followed,
-  }),
-);
-
-const dbUserSettingsSchema = dbUserSchema.extend({
-  banner: z.string().nullish(),
-  status: z.string().nullish(),
-});
-
-const dbUserSettingsToGlobalUserSettingsSchema = dbUserSettingsSchema.transform(
-  (db): UserSettings => ({
-    id: db.user_id,
-    username: db.username,
-    avatar: db.avatar,
-    followed: db.is_followed,
-    banner: db.banner,
-    status: db.status,
-  }),
-);
-
-const dbProfileSchema = dbUserSettingsSchema.extend({
-  followers_count: z.number().int().min(0).catch(0),
-  following_count: z.number().int().min(0).catch(0),
-});
-
-const dbProfileToGlobalProfileSchema = dbProfileSchema.transform(
-  (db): Profile => ({
-    id: db.user_id,
-    username: db.username,
-    avatar: db.avatar,
-    followed: db.is_followed,
-    banner: db.banner,
-    status: db.status,
-    followers: db.followers_count,
-    following: db.following_count,
-  }),
-);
-
 // /exists -> does user with specific id exists (for client middleware)
 app.get("/exists", async (c) => {
   const { id } = c.req.query();
-  if (!id)
-    throw new HTTPException(400, { message: "Please provide target user id" });
+  if (!id) throw new MissingIdError();
   const processedId = idNumberSchema.parse(id);
   const data = await db.query.users.findFirst({
     columns: {},
@@ -92,8 +37,7 @@ app.get("/exists", async (c) => {
 // /follows scope=follows  :id -> list of users this user is following
 app.get("/follows", async (c) => {
   const { id, page, limit, scope } = c.req.query();
-  if (!id)
-    throw new HTTPException(400, { message: "Please provide target user id" });
+  if (!id) throw new MissingIdError();
   const processedAuthId = idNumberSchema.nullish().parse(mockUserId);
   const processedTargetId = idNumberSchema.parse(id);
   const processedPage = z.coerce.number().int().min(1).catch(1).parse(page);
@@ -191,8 +135,7 @@ app.get("/popular", async (c) => {
 // combine them all with scope on /
 app.get("/", async (c) => {
   const { id, scope } = c.req.query();
-  if (!id)
-    throw new HTTPException(400, { message: "Please provide target user id" });
+  if (!id) throw new MissingIdError();
   const processedAuthId = idNumberSchema.nullish().parse(mockUserId);
   const processedTargetId = idNumberSchema.parse(id);
   const processedScope = z
