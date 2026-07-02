@@ -40,6 +40,14 @@ declare global {
     banner?: string | null;
     status?: string | null;
   }
+
+  interface UserSettingsInput extends Partial<
+    Omit<UserSettings, "id" | "followed">
+  > {
+    password?: string;
+    email?: string;
+  }
+
   interface Profile extends UserSettings {
     followers: number;
     following: number;
@@ -47,8 +55,8 @@ declare global {
 
   interface Trend {
     id: string;
-    hashtag: string; // название тренда # автоматическая
-    //tweets: Tweet[]; // твиты по этому хештегу тренду хз
-    tweets: number; // количество твитов по этому тренду хз
+    hashtag: string; // trend name with automatic #
+    //tweets: Tweet[]; // idk tweets under this hashtag
+    tweets: number; // amount of tweets under this hashtag
   }
 }

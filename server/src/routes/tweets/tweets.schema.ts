@@ -1,6 +1,5 @@
-import { tweets } from "@/db/schema.js";
-import { idSchema } from "@/schema.js";
-import z, { string } from "zod";
+import { idNumberSchema, idSchema } from "@/schema.js";
+import z from "zod";
 
 const DEFAULT_PAGE_LIMIT = 10;
 const MAX_PAGE_LIMIT = 25;
@@ -116,14 +115,12 @@ export const globalTweetSchema = z.preprocess(
  * Schema for parsing TweetInput to actual tweet insert schema
  */
 export const globalTweetToDbTweetSchema = (userId: number | string) =>
-  globalTweetSchema.transform((tweet): typeof tweets.$inferInsert => ({
-    user_id: idSchema
-      .transform(Number)
-      .pipe(z.number().positive().int())
-      .parse(userId),
+  globalTweetSchema.transform((tweet) => ({
+    user_id: idNumberSchema.parse(userId),
     content: tweet.content,
     only_followers: tweet.onlyFollowers,
     reply_to: tweet.replyTo,
+    image: z.string().nullish().parse(null),
   }));
 
 /**

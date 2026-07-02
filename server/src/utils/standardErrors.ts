@@ -22,3 +22,12 @@ export class Tweet404Error extends HTTPException {
     this.name = "Tweet404Error";
   }
 }
+
+export class User404Error extends HTTPException {
+  constructor(id: string | number) {
+    super(404, {
+      message: `User with id #${id} does not exist`,
+    });
+    this.name = "User404Error";
+  }
+}

@@ -290,7 +290,7 @@ app.delete("/saves/:id{\\d+}", async (c) => {
 app.post("/", async (c) => {
   const formData = await c.req.formData();
   const { hashtag, ...rawTweetData } = globalTweetSchema.parse(
-    formData.get("content"),
+    formData.get("tweet"),
   );
   const tweetData = globalTweetToDbTweetSchema(userId).parse(rawTweetData);
   const imageFile = imageSchema.parse(formData.get("image"));

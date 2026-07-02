@@ -38,6 +38,12 @@ export const users = sqliteTable(
     status: text("status", { mode: "text" }),
     avatar: text("avatar", { mode: "text" }),
     banner: text("banner", { mode: "text" }),
+    followers_count: integer("follows_count", { mode: "number" })
+      .notNull()
+      .default(0),
+    following_count: integer("following_count", { mode: "number" })
+      .notNull()
+      .default(0),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -52,6 +58,14 @@ export const users = sqliteTable(
       sql`${table.username} NOT LIKE '% ' 
       AND ${table.username} NOT LIKE ' %'
       AND (length(${table.username}) - length(replace(${table.username}, ' ',''))) <= 1`,
+    ),
+    check(
+      "followers_count_validation_check",
+      sql`${table.followers_count} >= 0`,
+    ),
+    check(
+      "following_count_validation_check",
+      sql`${table.following_count} >= 0`,
     ),
   ],
 );
@@ -139,6 +153,10 @@ export const tweets = sqliteTable(
     foreignKey({ columns: [table.reply_to], foreignColumns: [table.tweet_id] })
       .onDelete("set null")
       .onUpdate("cascade"),
+    check("likes_count_validation_check", sql`${table.likes_count} >= 0`),
+    check("replies_count_validation_check", sql`${table.replies_count} >= 0`),
+    check("retweets_count_validation_check", sql`${table.retweets_count} >= 0`),
+    check("saves_count_validation_check", sql`${table.saves_count} >= 0`),
   ],
 );
 
@@ -169,6 +187,7 @@ export const hashtags = sqliteTable(
       AND instr(${table.hashtag}, ' ') = 0
       `,
     ),
+    check("tweets_count_validation_check", sql`${table.tweets_count} >= 0`),
   ],
 );
 
