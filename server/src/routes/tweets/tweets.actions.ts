@@ -1,23 +1,19 @@
 import { db } from "@/db/index.js";
 import {
-  follows,
   hashtags,
   likes,
   retweets,
   saves,
   tweets,
   tweets_hashtags,
-  users,
 } from "@/db/schema.js";
-import { and, eq, like, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { SQLiteTransaction } from "drizzle-orm/sqlite-core";
 import { Hono } from "hono";
 import z from "zod";
-import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import {
   ACTION,
   dbTweetToGlobalTweetSchema,
-  DbTweetType,
   globalTweetSchema,
   globalTweetToDbTweetSchema,
   TweetExistsAndActionInput,
@@ -25,14 +21,15 @@ import {
 } from "./tweets.schema.js";
 import { HTTPException } from "hono/http-exception";
 import uploadImage from "@/utils/uploadImage.js";
-import { imageSchema } from "@/schema.js";
-import { text } from "drizzle-orm/singlestore-core/columns/text";
-import { Tweet404Error } from "@/utils/standardErrors.js";
+import { idNumberSchema, imageSchema } from "@/schema.js";
+import { ActionNoReturnError, Tweet404Error } from "@/utils/standardErrors.js";
+import { authMiddleware } from "@/middleware/auth.middleware.js";
 
 const app = new Hono();
 
-const userId = 1;
-
+/**
+ * To be used only with transaction
+ */
 const tweetExistsAndActionQuery = (
   tx: SQLiteTransaction<"async", any, any>,
   query: TweetExistsAndActionInput,
@@ -77,9 +74,10 @@ const tweetExistsAndActionQuery = (
     .where(eq(tweets.tweet_id, tweetId));
 };
 // likes -> post
-app.post("/likes/:id{\\d+}", async (c) => {
+app.post("/likes/:id{\\d+}", authMiddleware, async (c) => {
   const { id } = c.req.param();
-  const tweetId = z.coerce.number().min(1).int().parse(id);
+  const tweetId = idNumberSchema.parse(id);
+  const userId = c.get("userId");
   const resp = await db.transaction(async (tx) => {
     const [exists] = await tweetExistsAndActionQuery(tx, {
       action: ACTION.like,
@@ -98,20 +96,25 @@ app.post("/likes/:id{\\d+}", async (c) => {
       user_id: userId,
       tweet_id: tweetId,
     });
-    await tx
+    const [newLikesAmount] = await tx
       .update(tweets)
       .set({
         likes_count: sql<number>`${tweets.likes_count} + 1`,
       })
-      .where(eq(tweets.tweet_id, tweetId));
+      .where(eq(tweets.tweet_id, tweetId))
+      .returning({ newLikesAmount: tweets.likes_count });
+    if (!newLikesAmount) throw new ActionNoReturnError("Like insertion");
+    return newLikesAmount;
   });
-  return c.body(null, 204);
+  // No location because my post requests anyway don't lead anywhere
+  return c.json(resp, 201);
 });
 
 // likes -> delete
-app.delete("/likes/:id{\\d+}", async (c) => {
+app.delete("/likes/:id{\\d+}", authMiddleware, async (c) => {
   const { id } = c.req.param();
-  const tweetId = z.coerce.number().min(1).int().parse(id);
+  const tweetId = idNumberSchema.parse(id);
+  const userId = c.get("userId");
   const resp = await db.transaction(async (tx) => {
     const [exists] = await tweetExistsAndActionQuery(tx, {
       action: ACTION.like,
@@ -129,20 +132,24 @@ app.delete("/likes/:id{\\d+}", async (c) => {
     await tx
       .delete(likes)
       .where(and(eq(likes.tweet_id, tweetId), eq(likes.user_id, userId)));
-    await tx
+    const [newLikesAmount] = await tx
       .update(tweets)
       .set({
         likes_count: sql<number>`${tweets.likes_count} - 1`,
       })
-      .where(eq(tweets.tweet_id, tweetId));
+      .where(eq(tweets.tweet_id, tweetId))
+      .returning({ newLikesAmount: tweets.likes_count });
+    if (!newLikesAmount) throw new ActionNoReturnError("Like deletion");
+    return newLikesAmount;
   });
-  return c.body(null, 204);
+  return c.json(resp, 200);
 });
 
 // retweeted -> post
-app.post("/retweets/:id{\\d+}", async (c) => {
+app.post("/retweets/:id{\\d+}", authMiddleware, async (c) => {
   const { id } = c.req.param();
-  const tweetId = z.coerce.number().min(1).int().parse(id);
+  const tweetId = idNumberSchema.parse(id);
+  const userId = c.get("userId");
   const resp = await db.transaction(async (tx) => {
     const [exists] = await tweetExistsAndActionQuery(tx, {
       action: ACTION.retweet,
@@ -161,20 +168,24 @@ app.post("/retweets/:id{\\d+}", async (c) => {
       user_id: userId,
       tweet_id: tweetId,
     });
-    await tx
+    const [newRetweetsAmount] = await tx
       .update(tweets)
       .set({
         retweets_count: sql<number>`${tweets.retweets_count} + 1`,
       })
-      .where(eq(tweets.tweet_id, tweetId));
+      .where(eq(tweets.tweet_id, tweetId))
+      .returning({ newRetweetsAmount: tweets.retweets_count });
+    if (!newRetweetsAmount) throw new ActionNoReturnError("Retweet insertion");
+    return newRetweetsAmount;
   });
-  return c.body(null, 204);
+  return c.json(resp, 201);
 });
 
 // retweeted -> delete
-app.delete("/retweets/:id{\\d+}", async (c) => {
+app.delete("/retweets/:id{\\d+}", authMiddleware, async (c) => {
   const { id } = c.req.param();
-  const tweetId = z.coerce.number().min(1).int().parse(id);
+  const tweetId = idNumberSchema.parse(id);
+  const userId = c.get("userId");
   const resp = await db.transaction(async (tx) => {
     const [exists] = await tweetExistsAndActionQuery(tx, {
       action: ACTION.retweet,
@@ -192,20 +203,24 @@ app.delete("/retweets/:id{\\d+}", async (c) => {
     await tx
       .delete(retweets)
       .where(and(eq(retweets.tweet_id, tweetId), eq(retweets.user_id, userId)));
-    await tx
+    const [newRetweetsAmount] = await tx
       .update(tweets)
       .set({
         retweets_count: sql<number>`${tweets.retweets_count} - 1`,
       })
-      .where(eq(tweets.tweet_id, tweetId));
+      .where(eq(tweets.tweet_id, tweetId))
+      .returning({ newRetweetsAmount: tweets.retweets_count });
+    if (!newRetweetsAmount) throw new ActionNoReturnError("Retweet deletion");
+    return newRetweetsAmount;
   });
-  return c.body(null, 204);
+  return c.json(resp, 200);
 });
 
 // saves -> post
-app.post("/saves/:id{\\d+}", async (c) => {
+app.post("/saves/:id{\\d+}", authMiddleware, async (c) => {
   const { id } = c.req.param();
-  const tweetId = z.coerce.number().min(1).int().parse(id);
+  const tweetId = idNumberSchema.parse(id);
+  const userId = c.get("userId");
   const resp = await db.transaction(async (tx) => {
     const [exists] = await tweetExistsAndActionQuery(tx, {
       action: ACTION.save,
@@ -224,20 +239,24 @@ app.post("/saves/:id{\\d+}", async (c) => {
       user_id: userId,
       tweet_id: tweetId,
     });
-    await tx
+    const [newSavesAmount] = await tx
       .update(tweets)
       .set({
         saves_count: sql<number>`${tweets.saves_count} + 1`,
       })
+      .returning({ newSavesAmount: tweets.saves_count })
       .where(eq(tweets.tweet_id, tweetId));
+    if (!newSavesAmount) throw new ActionNoReturnError("Save insertion");
+    return newSavesAmount;
   });
-  return c.body(null, 204);
+  return c.json(resp, 201);
 });
 
 // saves -> delete
-app.delete("/saves/:id{\\d+}", async (c) => {
+app.delete("/saves/:id{\\d+}", authMiddleware, async (c) => {
   const { id } = c.req.param();
-  const tweetId = z.coerce.number().min(1).int().parse(id);
+  const tweetId = idNumberSchema.parse(id);
+  const userId = c.get("userId");
   const resp = await db.transaction(async (tx) => {
     const [exists] = await tweetExistsAndActionQuery(tx, {
       action: ACTION.save,
@@ -255,43 +274,26 @@ app.delete("/saves/:id{\\d+}", async (c) => {
     await tx
       .delete(saves)
       .where(and(eq(saves.tweet_id, tweetId), eq(saves.user_id, userId)));
-    await tx
+    const [newSavesAmount] = await tx
       .update(tweets)
       .set({
         saves_count: sql<number>`${tweets.saves_count} - 1`,
       })
-      .where(eq(tweets.tweet_id, tweetId));
+      .where(eq(tweets.tweet_id, tweetId))
+      .returning({ newSavesAmount: tweets.saves_count });
+    if (!newSavesAmount) throw new ActionNoReturnError("Save deletion");
+    return newSavesAmount;
   });
-  return c.body(null, 204);
+  return c.json(resp, 200);
 });
 
-//temporary for testing purposes
-// app.get("/test-form", (c) => {
-//   const mockTweet: TweetInput = {
-//     content: "some text",
-//     hashtag: "idkTag",
-//   };
-//   return c.html(`
-//     <!DOCTYPE html>
-//     <html>
-//       <head><title>Test Tweet</title></head>
-//       <body>
-//         <form action="/tweets" method="POST" enctype="multipart/form-data">
-//           <textarea name="content" placeholder="What's happening?" required>${JSON.stringify(mockTweet)}</textarea><br/>
-//           <input type="file" name="image" accept="image/*" /><br/>
-//           <button type="submit">Tweet</button>
-//         </form>
-//       </body>
-//     </html>
-//   `);
-// });
-
 // main -> post
-app.post("/", async (c) => {
+app.post("/", authMiddleware, async (c) => {
   const formData = await c.req.formData();
   const { hashtag, ...rawTweetData } = globalTweetSchema.parse(
     formData.get("tweet"),
   );
+  const userId = c.get("userId");
   const tweetData = globalTweetToDbTweetSchema(userId).parse(rawTweetData);
   const imageFile = imageSchema.parse(formData.get("image"));
   if (imageFile) tweetData.image = await uploadImage(imageFile);
@@ -380,7 +382,28 @@ app.post("/", async (c) => {
       hashtag,
     });
   });
-  return c.json(response);
+  return c.json(response, 201);
 });
 
 export default app;
+
+//temporary for testing purposes
+// app.get("/test-form", (c) => {
+//   const mockTweet: TweetInput = {
+//     content: "some text",
+//     hashtag: "idkTag",
+//   };
+//   return c.html(`
+//     <!DOCTYPE html>
+//     <html>
+//       <head><title>Test Tweet</title></head>
+//       <body>
+//         <form action="/tweets" method="POST" enctype="multipart/form-data">
+//           <textarea name="content" placeholder="What's happening?" required>${JSON.stringify(mockTweet)}</textarea><br/>
+//           <input type="file" name="image" accept="image/*" /><br/>
+//           <button type="submit">Tweet</button>
+//         </form>
+//       </body>
+//     </html>
+//   `);
+// });

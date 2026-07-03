@@ -39,3 +39,11 @@ export class Session404Error extends HTTPException {
     });
   }
 }
+
+export class ActionNoReturnError extends HTTPException {
+  constructor(action: string) {
+    super(500, {
+      message: `${action} was successful but did not return new values for whatever reason, try again.`,
+    });
+  }
+}

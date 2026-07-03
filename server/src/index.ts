@@ -10,6 +10,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import userRoutes from "@/routes/users/users.routes.js";
 import tweetsRoutes from "@/routes/tweets/tweets.routes.js";
+import authRoutes from "@/routes/auth/auth.routes.js";
 import { HTTPException } from "hono/http-exception";
 import z, { ZodError } from "zod";
 import { db } from "./db/index.js";
@@ -36,6 +37,7 @@ app.onError((err, c) => {
 
 app.route("/users", userRoutes);
 app.route("/tweets", tweetsRoutes);
+app.route("/auth", authRoutes);
 
 serve(
   {

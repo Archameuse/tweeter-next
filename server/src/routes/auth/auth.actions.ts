@@ -79,7 +79,6 @@ app.post("/login", async (c) => {
 
 app.post("/logout", authMiddleware, async (c) => {
   const sessionId = c.get("sessionId");
-  if (!sessionId) throw new UnauthenticatedError();
   await deleteSession({ sessionId, c });
   return c.body(null, 204);
 });

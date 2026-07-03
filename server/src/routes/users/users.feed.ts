@@ -16,32 +16,36 @@ import {
   USER_SCOPE,
 } from "./users.schema.js";
 import { MissingIdError } from "@/utils/standardErrors.js";
+import {
+  authMiddleware,
+  optionalAuthMiddleware,
+} from "@/middleware/auth.middleware.js";
 
 const app = new Hono();
 
-const mockUserId = 1;
 const MIN_PAGE_LIMIT = 5;
 const MAX_PAGE_LIMIT = 15;
 const DEFAULT_PAGE_LIMIT = 10;
 
-// /exists -> does user with specific id exists (for client middleware)
-app.get("/exists", async (c) => {
-  const { id } = c.req.query();
-  if (!id) throw new MissingIdError();
-  const processedId = idNumberSchema.parse(id);
-  const data = await db.query.users.findFirst({
-    columns: {},
-    where: { user_id: processedId },
-  });
-  return c.json({ exists: !!data });
-});
+// /exists -> does user with specific id exists, don't think I need it with current setup
+// but still will keep in comments just in case if I missed something
+// app.get("/exists", async (c) => {
+//   const { id } = c.req.query();
+//   if (!id) throw new MissingIdError();
+//   const processedId = idNumberSchema.parse(id);
+//   const data = await db.query.users.findFirst({
+//     columns: {},
+//     where: { user_id: processedId },
+//   });
+//   return c.json({ exists: !!data });
+// });
 
 // /follows scope=followers :id -> list of this user's followers
 // /follows scope=follows  :id -> list of users this user is following
-app.get("/follows", async (c) => {
+app.get("/follows", optionalAuthMiddleware, async (c) => {
   const { id, page, limit, scope } = c.req.query();
   if (!id) throw new MissingIdError();
-  const processedAuthId = idNumberSchema.nullish().parse(mockUserId);
+  const authId = c.get("userId");
   const processedTargetId = idNumberSchema.parse(id);
   const processedPage = z.coerce.number().int().min(1).catch(1).parse(page);
   const processedLimit = z.coerce
@@ -72,10 +76,10 @@ app.get("/follows", async (c) => {
         sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.follower_id} = ${users.user_id})`.as(
           "following_count",
         ),
-      ...(processedAuthId &&
-        processedAuthId !== processedTargetId && {
+      ...(authId &&
+        authId !== processedTargetId && {
           is_followed:
-            sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id} AND ${follows.follower_id} = ${processedAuthId})`.as(
+            sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id} AND ${follows.follower_id} = ${authId})`.as(
               "is_followed",
             ),
         }),
@@ -99,8 +103,8 @@ app.get("/follows", async (c) => {
 });
 
 // /popular -> top 5 users by followers, maybe some algo in future
-app.get("/popular", async (c) => {
-  const processedAuthId = idNumberSchema.nullish().parse(mockUserId);
+app.get("/popular", optionalAuthMiddleware, async (c) => {
+  const authId = c.get("userId");
   const followersCount =
     sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id})`.as(
       "followers_count",
@@ -119,9 +123,9 @@ app.get("/popular", async (c) => {
       followers_count: followersCount,
       following_count: followingCount,
 
-      ...(processedAuthId && {
+      ...(authId && {
         is_followed:
-          sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id} AND ${follows.follower_id} = ${processedAuthId})`.as(
+          sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id} AND ${follows.follower_id} = ${authId})`.as(
             "is_followed",
           ),
       }),
@@ -136,11 +140,17 @@ app.get("/popular", async (c) => {
 // /profile -> specific users return profile data
 // / -> get user by id
 // combine them all with scope on /
-app.get("/", async (c) => {
+/**
+ * You either pass id or if you logged in it can fallback to your current id otherwise 404
+ */
+app.get("/", optionalAuthMiddleware, async (c) => {
   const { id, scope } = c.req.query();
-  if (!id) throw new MissingIdError();
-  const processedAuthId = idNumberSchema.nullish().parse(mockUserId);
-  const processedTargetId = idNumberSchema.parse(id);
+  const authId = c.get("userId");
+  const processedTargetId = idNumberSchema.nullish().parse(id) ?? authId;
+  if (!processedTargetId)
+    throw new HTTPException(400, {
+      message: "Either pass id query or valid session",
+    });
   const processedScope = z
     .preprocess((val) => val, z.enum(USER_SCOPE))
     .catch(USER_SCOPE.user)
@@ -153,10 +163,10 @@ app.get("/", async (c) => {
       ...(processedScope !== USER_SCOPE.user && { banner: true, status: true }),
     },
     extras: {
-      ...(processedAuthId &&
-        processedAuthId !== processedTargetId && {
+      ...(authId &&
+        authId !== processedTargetId && {
           is_followed:
-            sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${processedTargetId} AND ${follows.follower_id} = ${processedAuthId})`.as(
+            sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${processedTargetId} AND ${follows.follower_id} = ${authId})`.as(
               "is_followed",
             ),
         }),
@@ -192,5 +202,62 @@ app.get("/", async (c) => {
       });
   }
 });
+
+// app.get("/", optionalAuthMiddleware, async (c) => {
+//   const { id, scope } = c.req.query();
+//   if (!id) throw new MissingIdError();
+//   const authId = c.get('userId')
+//   const processedTargetId = idNumberSchema.parse(id);
+//   const processedScope = z
+//     .preprocess((val) => val, z.enum(USER_SCOPE))
+//     .catch(USER_SCOPE.user)
+//     .parse(scope);
+//   const data = await db.query.users.findFirst({
+//     columns: {
+//       user_id: true,
+//       avatar: true,
+//       username: true,
+//       ...(processedScope !== USER_SCOPE.user && { banner: true, status: true }),
+//     },
+//     extras: {
+//       ...(authId &&
+//         authId !== processedTargetId && {
+//           is_followed:
+//             sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${processedTargetId} AND ${follows.follower_id} = ${authId})`.as(
+//               "is_followed",
+//             ),
+//         }),
+//       ...(processedScope === USER_SCOPE.profile && {
+//         followers_count:
+//           sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.followed_id} = ${processedTargetId})`.as(
+//             "followers_count",
+//           ),
+//         following_count:
+//           sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.follower_id} = ${processedTargetId})`.as(
+//             "following_count",
+//           ),
+//       }),
+//     },
+//     where: {
+//       user_id: processedTargetId,
+//     },
+//   });
+//   if (!data)
+//     throw new HTTPException(404, {
+//       message: `Cant find ${processedScope} with user id of #${processedTargetId}`,
+//     });
+//   switch (processedScope) {
+//     case USER_SCOPE.user:
+//       return c.json(dbUserToGlobalUserSchema.parse(data));
+//     case USER_SCOPE.settings:
+//       return c.json(dbUserSettingsSchema.parse(data));
+//     case USER_SCOPE.profile:
+//       return c.json(dbProfileToGlobalProfileSchema.parse(data));
+//     default:
+//       throw new HTTPException(404, {
+//         message: `Somehow unexpected scope passed through zod validator, please make sure to select one of following options: "${USER_SCOPE.user}", "${USER_SCOPE.settings}", "${USER_SCOPE.profile}".`,
+//       });
+//   }
+// });
 
 export default app;

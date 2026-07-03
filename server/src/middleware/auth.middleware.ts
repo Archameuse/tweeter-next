@@ -1,4 +1,4 @@
-import { idSchema } from "@/schema.js";
+import { idNumberSchema, idSchema } from "@/schema.js";
 import {
   deleteSession,
   getSession,
@@ -7,13 +7,15 @@ import {
 } from "@/utils/sessionsHandlers.js";
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
+import z from "zod";
 
-/**
- * userId is string so i can parse it later into either number or bignumber for db interaction
- * since idNumberSchema anyway extends idSchema it just makes more sense to parse first into idSchema
- */
+type AuthVariables = {
+  sessionId: string;
+  userId: z.infer<typeof idNumberSchema>;
+};
+
 export const authMiddleware = createMiddleware<{
-  Variables: { sessionId: string; userId: string };
+  Variables: AuthVariables;
 }>(async (c, next) => {
   const session = await getSession(c);
   if (!session) {
@@ -25,7 +27,7 @@ export const authMiddleware = createMiddleware<{
   const validation = validateSession(session);
   switch (validation) {
     case VALIDATION_STATE.valid: //actually validate user and pass along userId and sessionId (for logout)
-      c.set("userId", idSchema.parse(session.user_id));
+      c.set("userId", idNumberSchema.parse(session.user_id));
       c.set("sessionId", session.session_id);
       await next();
       break;
@@ -41,4 +43,20 @@ export const authMiddleware = createMiddleware<{
 
     //means session exists but it is invalid
   }
+});
+
+export const optionalAuthMiddleware = createMiddleware<{
+  Variables: Partial<AuthVariables>;
+}>(async (c, next) => {
+  try {
+    const session = await getSession(c);
+    if (session) {
+      const validation = validateSession(session);
+      if (validation === VALIDATION_STATE.valid) {
+        c.set("userId", idNumberSchema.parse(session.user_id));
+        c.set("sessionId", session.session_id);
+      }
+    }
+  } catch {}
+  await next();
 });

@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { follows, users } from "@/db/schema.js";
 import { idNumberSchema, imageSchema } from "@/schema.js";
-import { UnauthenticatedError, User404Error } from "@/utils/standardErrors.js";
+import { ActionNoReturnError, User404Error } from "@/utils/standardErrors.js";
 import { and, eq, sql } from "drizzle-orm";
 import { SQLiteTransaction } from "drizzle-orm/sqlite-core";
 import { Hono } from "hono";
@@ -13,10 +13,9 @@ import {
   globalUserSettingsToDbSettingsSchema,
 } from "./users.schema.js";
 import uploadImage from "@/utils/uploadImage.js";
+import { authMiddleware } from "@/middleware/auth.middleware.js";
 
 const app = new Hono();
-
-const mockUserId = 1;
 
 const followExists = (
   tx: SQLiteTransaction<"async", any, any>,
@@ -39,28 +38,27 @@ const followExists = (
 };
 
 // follow/:id -> post -> follow to specific user
-app.post("/follow/:id{\\d+}", async (c) => {
+app.post("/follow/:id{\\d+}", authMiddleware, async (c) => {
   const { id } = c.req.param();
-  const processedAuthId = idNumberSchema.nullish().parse(mockUserId);
+  const authId = c.get("userId");
   const processedTargetId = idNumberSchema.parse(id);
-  if (!processedAuthId) throw new UnauthenticatedError();
-  if (processedAuthId === processedTargetId)
+  if (authId === processedTargetId)
     throw new HTTPException(400, { message: "You cannot follow yourself" });
   const result = await db.transaction(async (tx) => {
     // const users = db.select(users);
     const [exists] = await followExists(tx, {
-      authId: processedAuthId,
+      authId,
       targetId: processedTargetId,
     });
     if (!exists) throw new User404Error(processedTargetId);
     if (exists.isFollowed) {
       throw new HTTPException(409, {
-        message: `User with id #${processedTargetId} is already followed by user #${processedAuthId}`,
+        message: `User with id #${processedTargetId} is already followed by user #${authId}`,
       });
     }
     await tx
       .insert(follows)
-      .values({ followed_id: processedTargetId, follower_id: processedAuthId });
+      .values({ followed_id: processedTargetId, follower_id: authId });
     const newFollowersAmount = (
       await tx
         .update(users)
@@ -72,40 +70,36 @@ app.post("/follow/:id{\\d+}", async (c) => {
       await tx
         .update(users)
         .set({ following_count: sql<number>`${users.following_count} + 1` })
-        .where(eq(users.user_id, processedAuthId))
+        .where(eq(users.user_id, authId))
         .returning({ amount: users.following_count })
     )[0]?.amount;
     if (
       (!newFollowersAmount && newFollowersAmount !== 0) ||
       (!newFollowingAmount && newFollowingAmount !== 0)
     )
-      throw new HTTPException(500, {
-        message:
-          "Follow insertion was successful but did not return new values for whatever reason, try again.",
-      });
+      throw new ActionNoReturnError("Follow insertion");
     return { newFollowersAmount, newFollowingAmount };
   });
-  return c.json(result);
+  return c.json(result, 201);
 });
 
 // follow/:id -> delete -> unfollow from specific user
-app.delete("/follow/:id{\\d+}", async (c) => {
+app.delete("/follow/:id{\\d+}", authMiddleware, async (c) => {
   const { id } = c.req.param();
-  const processedAuthId = idNumberSchema.nullish().parse(mockUserId);
+  const authId = c.get("userId");
   const processedTargetId = idNumberSchema.parse(id);
-  if (!processedAuthId) throw new UnauthenticatedError();
-  if (processedAuthId === processedTargetId)
+  if (authId === processedTargetId)
     throw new HTTPException(400, { message: "You cannot unfollow yourself" });
   const result = await db.transaction(async (tx) => {
     // const users = db.select(users);
     const [exists] = await followExists(tx, {
-      authId: processedAuthId,
+      authId,
       targetId: processedTargetId,
     });
     if (!exists) throw new User404Error(processedTargetId);
     if (!exists.isFollowed) {
       throw new HTTPException(409, {
-        message: `User with id #${processedTargetId} is not followed by user #${processedAuthId}`,
+        message: `User with id #${processedTargetId} is not followed by user #${authId}`,
       });
     }
     await tx
@@ -113,7 +107,7 @@ app.delete("/follow/:id{\\d+}", async (c) => {
       .where(
         and(
           eq(follows.followed_id, processedTargetId),
-          eq(follows.follower_id, processedAuthId),
+          eq(follows.follower_id, authId),
         ),
       );
 
@@ -128,26 +122,22 @@ app.delete("/follow/:id{\\d+}", async (c) => {
       await tx
         .update(users)
         .set({ following_count: sql<number>`${users.following_count} - 1` })
-        .where(eq(users.user_id, processedAuthId))
+        .where(eq(users.user_id, authId))
         .returning({ amount: users.following_count })
     )[0]?.amount;
     if (
       (!newFollowersAmount && newFollowersAmount !== 0) ||
       (!newFollowingAmount && newFollowingAmount !== 0)
     )
-      throw new HTTPException(500, {
-        message:
-          "Follow deletion was successful but did not return new values for whatever reason, try again.",
-      });
+      throw new ActionNoReturnError("Follow deletion");
     return { newFollowersAmount, newFollowingAmount };
   });
-  return c.json(result);
+  return c.json(result, 200);
 });
 
 // settings/:id -> post? -> update settings of specific user
-app.put("/settings", async (c) => {
-  const processedAuthId = idNumberSchema.nullish().parse(mockUserId);
-  if (!processedAuthId) throw new UnauthenticatedError();
+app.put("/settings", authMiddleware, async (c) => {
+  const authId = c.get("userId");
   const formData = await c.req.formData();
   const updateSettingsData = globalUserSettingsToDbSettingsSchema.parse(
     formData.get("settings"),
@@ -168,10 +158,10 @@ app.put("/settings", async (c) => {
     const [exists] = await db
       .select({
         ...(filteredSettingsData.username && {
-          username_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.username_guard} = ${filteredSettingsData.username.toLowerCase()} AND ${users.user_id} != ${processedAuthId})`,
+          username_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.username_guard} = ${filteredSettingsData.username.toLowerCase()} AND ${users.user_id} != ${authId})`,
         }),
         ...(filteredSettingsData.email && {
-          email_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.email_guard} = ${filteredSettingsData.email.toLowerCase()} AND ${users.user_id} != ${processedAuthId})`,
+          email_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.email_guard} = ${filteredSettingsData.email.toLowerCase()} AND ${users.user_id} != ${authId})`,
         }),
       })
       .from(users)
@@ -189,10 +179,10 @@ app.put("/settings", async (c) => {
   const [res] = await db
     .update(users)
     .set(filteredSettingsData)
-    .where(eq(users.user_id, processedAuthId))
+    .where(eq(users.user_id, authId))
     .returning();
-  if (!res) throw new User404Error(processedAuthId);
-  return c.json(dbUserSettingsToGlobalUserSettingsSchema.parse(res));
+  if (!res) throw new User404Error(authId);
+  return c.json(dbUserSettingsToGlobalUserSettingsSchema.parse(res), 201);
 });
 
 export default app;
