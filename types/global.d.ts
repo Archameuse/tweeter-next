@@ -10,6 +10,13 @@ declare global {
     // status?: string;
   }
 
+  interface UserLoginInput {
+    email: string;
+    password: string;
+  }
+  interface UserCreateInput
+    extends Partial<Pick<User, "username">>, UserLoginInput {}
+
   interface Tweet {
     id: string;
     content: string;

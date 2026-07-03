@@ -1,4 +1,13 @@
-import { idNumberSchema, idSchema } from "@/schema.js";
+import {
+  countSchema,
+  hashtagSchema,
+  idNumberSchema,
+  idSchema,
+  imageLinkSchema,
+  looseIdSchema,
+  looseUsernameSchema,
+  optionalBooleanSchema,
+} from "@/schema.js";
 import z from "zod";
 
 const DEFAULT_PAGE_LIMIT = 10;
@@ -30,9 +39,9 @@ export enum ACTION {
  * Schema for validating response from database
  */
 export const dbTweetSchema = z.object({
-  tweet_id: idSchema,
+  tweet_id: looseIdSchema,
   content: z.string(),
-  image: z.string().nullable().optional(),
+  image: imageLinkSchema.nullish().catch(null),
   created_at: z.preprocess((val) => {
     if (typeof val === "number" && !Number.isNaN(val)) {
       return new Date(val * 1000);
@@ -41,14 +50,14 @@ export const dbTweetSchema = z.object({
     }
     return val;
   }, z.date()),
-  only_followers: z.coerce.boolean(),
+  only_followers: optionalBooleanSchema,
   author: z.object({
-    user_id: idSchema,
-    username: z.string(),
-    avatar: z.string().nullable().optional(),
-    is_followed: z.coerce.boolean().optional(),
+    user_id: looseIdSchema,
+    username: looseUsernameSchema,
+    avatar: imageLinkSchema.nullish().catch(null),
+    is_followed: optionalBooleanSchema,
   }),
-  reply_to: idSchema.nullable().optional(),
+  reply_to: looseIdSchema.nullish(),
   reply_to_author: z.preprocess(
     (val) => {
       if (typeof val === "string") {
@@ -61,21 +70,20 @@ export const dbTweetSchema = z.object({
     },
     z
       .object({
-        tweet_id: idSchema,
-        username: z.string(),
+        tweet_id: looseIdSchema,
+        username: looseUsernameSchema,
       })
-      .nullable()
-      .optional(),
+      .nullish(),
   ),
-  likes_count: z.coerce.number().default(0),
-  saves_count: z.coerce.number().default(0),
-  retweets_count: z.coerce.number().default(0),
-  replies_count: z.coerce.number().default(0),
-  retweeted_by: z.string().nullable().optional(),
-  hashtag: z.string().nullable().optional(),
-  is_liked: z.coerce.boolean().optional(),
-  is_saved: z.coerce.boolean().optional(),
-  is_retweeted: z.coerce.boolean().optional(),
+  likes_count: countSchema,
+  saves_count: countSchema,
+  retweets_count: countSchema,
+  replies_count: countSchema,
+  retweeted_by: looseUsernameSchema.nullish(),
+  hashtag: hashtagSchema.nullish().catch(null),
+  is_liked: optionalBooleanSchema,
+  is_saved: optionalBooleanSchema,
+  is_retweeted: optionalBooleanSchema,
 });
 
 /**
@@ -93,21 +101,10 @@ export const globalTweetSchema = z.preprocess(
     return val;
   },
   z.object({
-    replyTo: idSchema
-      .transform(Number)
-      .pipe(z.number().positive().int())
-      .nullish(),
+    replyTo: idNumberSchema.nullish(),
     content: z.string().trim().min(1),
-    hashtag: z
-      .string()
-      .trim()
-      .max(64)
-      .regex(/^[a-zA-Z]+[a-zA-Z0-9]*$/, {
-        error:
-          "Hashtag string must start with at least 1 letter and contain only latin letters and numbers",
-      })
-      .nullish(),
-    onlyFollowers: z.coerce.boolean().optional(),
+    hashtag: hashtagSchema.nullish(),
+    onlyFollowers: optionalBooleanSchema,
   }) satisfies z.ZodType<TweetInput>,
 );
 
@@ -175,16 +172,16 @@ export const filterQuerySchema = z.object({
     .preprocess((val) => val, z.set(z.enum(FILTER)))
     .catch(new Set([FILTER.all])),
   search: z.string().trim().toLowerCase().catch(""),
-  profileId: idSchema.transform(Number).pipe(z.number().positive()).optional(),
+  profileId: idNumberSchema.optional(),
   // profileId: z.coerce.number().int().positive().optional(),
-  isRetweet: z.coerce.boolean().catch(false),
-  tweetId: z.coerce.number().int().positive().optional(),
+  isRetweet: optionalBooleanSchema,
+  tweetId: idNumberSchema.optional(),
 });
 
 export const dbTrendsSchema = z.object({
   hashtag_id: idSchema,
-  hashtag: z.string(),
-  tweets_count: z.number(),
+  hashtag: hashtagSchema,
+  tweets_count: countSchema,
 });
 
 export const dbTrendsToGlobalTrendsSchema = dbTrendsSchema
@@ -198,8 +195,8 @@ export const dbTrendsToGlobalTrendsSchema = dbTrendsSchema
   .array();
 
 export const tweetExistsAndActionQuerySchema = z.object({
-  tweetId: z.coerce.number().min(1).int(),
-  userId: z.coerce.number().min(1).int(),
+  tweetId: idNumberSchema,
+  userId: idNumberSchema,
   action: z.enum(ACTION),
 });
 

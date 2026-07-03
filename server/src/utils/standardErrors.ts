@@ -31,3 +31,11 @@ export class User404Error extends HTTPException {
     this.name = "User404Error";
   }
 }
+
+export class Session404Error extends HTTPException {
+  constructor(id: string) {
+    super(404, {
+      message: `Session with id "${id}" does not exist`,
+    });
+  }
+}

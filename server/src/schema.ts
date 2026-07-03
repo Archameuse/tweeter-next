@@ -13,11 +13,64 @@ export const imageSchema = z.preprocess(
     .nullable(),
 );
 
+export const imageLinkSchema = z.string();
+
 export const idSchema = z.coerce
   .string()
   .trim()
   .regex(/^\d+$/, { error: "Id must contain only and at least 1 digits" });
 
+export const looseIdSchema = idSchema.catch((ctx) => {
+  console.error(`Corrupt id #${ctx.value}:`, ctx.issues);
+  return String(ctx);
+});
+
 export const idNumberSchema = idSchema
   .transform(Number)
   .pipe(z.number().min(1).int());
+
+export const emailSchema = z
+  .string()
+  .trim()
+  .regex(/^[\S]+@[\S]+$/);
+
+export const usernameSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-zA-Z]+[a-zA-Z0-9 ]*$/, {
+    error:
+      "Username must start with at least 1 letter and contain only latin letters and numbers",
+  })
+  .refine((val) => val.split(" ").length <= 2, {
+    error: "Username must contain at most one space",
+  });
+
+export const looseUsernameSchema = usernameSchema.catch((ctx) => {
+  console.error(`Corrupt username "${ctx.value}":`, ctx.issues);
+  return String(ctx);
+});
+
+/**
+ * Need to add validation later that this is in fact correct password
+ */
+export const passwordSchema = z.string().trim();
+
+/**
+ * Need to add validation later that this is in fact correct HASHED password
+ */
+export const hashedPasswordSchema = z.string().trim();
+
+export const optionalBooleanSchema = z.coerce.boolean().optional();
+
+export const countSchema = z.number().int().min(0).catch(0);
+
+export const optionalNullSchema = z.null().optional().catch(undefined);
+
+export const hashtagSchema = z
+  .string()
+  .trim()
+  .max(64)
+  .regex(/^[a-zA-Z]+[a-zA-Z0-9]*$/, {
+    error:
+      "Hashtag string must start with at least 1 letter and contain only latin letters and numbers",
+  });

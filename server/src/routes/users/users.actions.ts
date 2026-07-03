@@ -194,3 +194,5 @@ app.put("/settings", async (c) => {
   if (!res) throw new User404Error(processedAuthId);
   return c.json(dbUserSettingsToGlobalUserSettingsSchema.parse(res));
 });
+
+export default app;

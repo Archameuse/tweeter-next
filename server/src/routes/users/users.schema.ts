@@ -1,4 +1,16 @@
-import { idNumberSchema, idSchema } from "@/schema.js";
+import {
+  countSchema,
+  emailSchema,
+  idNumberSchema,
+  idSchema,
+  imageLinkSchema,
+  looseIdSchema,
+  looseUsernameSchema,
+  optionalBooleanSchema,
+  optionalNullSchema,
+  passwordSchema,
+  usernameSchema,
+} from "@/schema.js";
 import z from "zod";
 
 export enum USER_SCOPE {
@@ -13,10 +25,10 @@ export enum FOLLOW_SCOPE {
 }
 
 export const dbUserSchema = z.object({
-  user_id: idSchema,
-  username: z.string(),
-  avatar: z.string().nullish(),
-  is_followed: z.coerce.boolean().optional(),
+  user_id: looseIdSchema,
+  username: looseUsernameSchema,
+  avatar: imageLinkSchema.nullish().catch(null),
+  is_followed: optionalBooleanSchema,
 });
 
 export const dbUserToGlobalUserSchema = dbUserSchema.transform(
@@ -29,8 +41,8 @@ export const dbUserToGlobalUserSchema = dbUserSchema.transform(
 );
 
 export const dbUserSettingsSchema = dbUserSchema.extend({
-  banner: z.string().nullish(),
-  status: z.string().nullish(),
+  banner: imageLinkSchema.nullish().catch(null),
+  status: imageLinkSchema.nullish().catch(null),
 });
 
 export const dbUserSettingsToGlobalUserSettingsSchema =
@@ -46,8 +58,8 @@ export const dbUserSettingsToGlobalUserSettingsSchema =
   );
 
 export const dbProfileSchema = dbUserSettingsSchema.extend({
-  followers_count: z.number().int().min(0).catch(0),
-  following_count: z.number().int().min(0).catch(0),
+  followers_count: countSchema,
+  following_count: countSchema,
 });
 
 export const dbProfileToGlobalProfileSchema = dbProfileSchema.transform(
@@ -74,25 +86,11 @@ export const globalUserSettingsSchema = z.preprocess(
     return val;
   },
   z.object({
-    username: z
-      .string()
-      .trim()
-      .regex(/^[a-zA-Z]+[a-zA-Z0-9 ]*$/, {
-        error:
-          "Username must start with at least 1 letter and contain only latin letters and numbers",
-      })
-      .refine((val) => val.split(" ").length <= 2, {
-        error: "Username must contain at most one space",
-      })
-      .optional(),
-    password: z.string().trim().optional(),
-    email: z
-      .string()
-      .trim()
-      .regex(/^[\S]+@[\S]+$/)
-      .optional(),
-    avatar: z.null().optional().catch(undefined),
-    banner: z.null().optional().catch(undefined),
+    username: usernameSchema.optional(),
+    password: passwordSchema.optional(),
+    email: emailSchema.optional(),
+    avatar: optionalNullSchema,
+    banner: optionalNullSchema,
     status: z.string().nullish(),
   }) satisfies z.ZodType<UserSettingsInput>,
 );
@@ -103,8 +101,8 @@ export const globalUserSettingsToDbSettingsSchema =
     status: db.status,
     password: db.password,
     email: db.email,
-    avatar: z.string().nullish().parse(db.avatar),
-    banner: z.string().nullish().parse(db.banner),
+    avatar: imageLinkSchema.nullish().parse(db.avatar),
+    banner: imageLinkSchema.nullish().parse(db.banner),
   }));
 
 export const followExistQuerySchema = z.object({
