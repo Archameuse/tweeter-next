@@ -74,3 +74,21 @@ export const hashtagSchema = z
     error:
       "Hashtag string must start with at least 1 letter and contain only latin letters and numbers",
   });
+
+/**
+ * dbUserSchema and dbUserToGlobalUserSchema are here because they are reusable in auth route
+ */
+export const dbUserSchema = z.object({
+  user_id: looseIdSchema,
+  username: looseUsernameSchema,
+  avatar: imageLinkSchema.nullish().catch(null),
+  is_followed: optionalBooleanSchema,
+});
+export const dbUserToGlobalUserSchema = dbUserSchema.transform(
+  (db): User => ({
+    id: db.user_id,
+    username: db.username,
+    avatar: db.avatar,
+    followed: db.is_followed,
+  }),
+);

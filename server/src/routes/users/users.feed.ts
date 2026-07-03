@@ -1,6 +1,10 @@
 import { db } from "@/db/index.js";
 import { follows, users } from "@/db/schema.js";
-import { idNumberSchema, idSchema } from "@/schema.js";
+import {
+  dbUserToGlobalUserSchema,
+  idNumberSchema,
+  idSchema,
+} from "@/schema.js";
 import { desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -8,7 +12,6 @@ import z from "zod";
 import {
   dbProfileToGlobalProfileSchema,
   dbUserSettingsSchema,
-  dbUserToGlobalUserSchema,
   FOLLOW_SCOPE,
   USER_SCOPE,
 } from "./users.schema.js";

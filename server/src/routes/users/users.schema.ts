@@ -1,5 +1,6 @@
 import {
   countSchema,
+  dbUserSchema,
   emailSchema,
   idNumberSchema,
   idSchema,
@@ -23,22 +24,6 @@ export enum FOLLOW_SCOPE {
   followers = "followers",
   follows = "follows",
 }
-
-export const dbUserSchema = z.object({
-  user_id: looseIdSchema,
-  username: looseUsernameSchema,
-  avatar: imageLinkSchema.nullish().catch(null),
-  is_followed: optionalBooleanSchema,
-});
-
-export const dbUserToGlobalUserSchema = dbUserSchema.transform(
-  (db): User => ({
-    id: db.user_id,
-    username: db.username,
-    avatar: db.avatar,
-    followed: db.is_followed,
-  }),
-);
 
 export const dbUserSettingsSchema = dbUserSchema.extend({
   banner: imageLinkSchema.nullish().catch(null),
