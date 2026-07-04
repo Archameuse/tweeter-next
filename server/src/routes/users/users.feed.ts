@@ -11,7 +11,7 @@ import { HTTPException } from "hono/http-exception";
 import z from "zod";
 import {
   dbProfileToGlobalProfileSchema,
-  dbUserSettingsSchema,
+  dbUserSettingsToGlobalUserSettingsSchema,
   FOLLOW_SCOPE,
   USER_SCOPE,
 } from "./users.schema.js";
@@ -193,7 +193,7 @@ app.get("/", optionalAuthMiddleware, async (c) => {
     case USER_SCOPE.user:
       return c.json(dbUserToGlobalUserSchema.parse(data));
     case USER_SCOPE.settings:
-      return c.json(dbUserSettingsSchema.parse(data));
+      return c.json(dbUserSettingsToGlobalUserSettingsSchema.parse(data));
     case USER_SCOPE.profile:
       return c.json(dbProfileToGlobalProfileSchema.parse(data));
     default:

@@ -2,6 +2,7 @@ import { idNumberSchema, idSchema } from "@/schema.js";
 import {
   deleteSession,
   getSession,
+  refreshSession,
   validateSession,
   VALIDATION_STATE,
 } from "@/utils/sessionsHandlers.js";
@@ -29,6 +30,11 @@ export const authMiddleware = createMiddleware<{
     case VALIDATION_STATE.valid: //actually validate user and pass along userId and sessionId (for logout)
       c.set("userId", idNumberSchema.parse(session.user_id));
       c.set("sessionId", session.session_id);
+      try {
+        await refreshSession({ c, session });
+      } catch (error) {
+        console.error("Failed to refresh session, ignoring", error);
+      }
       await next();
       break;
     case VALIDATION_STATE.invalid_date: //prevent validation, delete cookie AND clear expired session

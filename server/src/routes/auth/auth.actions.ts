@@ -7,6 +7,7 @@ import { createSession, deleteSession } from "@/utils/sessionsHandlers.js";
 import { authMiddleware } from "@/middleware/auth.middleware.js";
 import { createUserSchema, loginUserSchema } from "./auth.schema.js";
 import { dbUserToGlobalUserSchema } from "@/schema.js";
+import { sql } from "drizzle-orm";
 
 const app = new Hono();
 
@@ -16,6 +17,7 @@ app.post("/create", async (c) => {
   const res = await db.transaction(async (tx) => {
     const emailExists = await tx.query.users.findFirst({
       columns: {},
+      extras: { exist: sql`1` },
       where: { email_guard: email.toLowerCase() },
     });
     if (emailExists) {
@@ -25,6 +27,7 @@ app.post("/create", async (c) => {
     }
     const usernameExists = await tx.query.users.findFirst({
       columns: {},
+      extras: { exist: sql`1` },
       where: { username_guard: username.toLowerCase() },
     });
     if (usernameExists) {
@@ -54,7 +57,7 @@ app.post("/create", async (c) => {
     return parsedUser;
   });
   // readdress to /
-  return c.json(res); //?
+  return c.json(res, 201); //?
 });
 
 app.post("/login", async (c) => {
@@ -74,7 +77,7 @@ app.post("/login", async (c) => {
   const cleanUser = dbUserToGlobalUserSchema.parse(user);
   await createSession({ c, userId: cleanUser.id });
   // readdress to /
-  return c.json(cleanUser);
+  return c.json(cleanUser, 200);
 });
 
 app.post("/logout", authMiddleware, async (c) => {
