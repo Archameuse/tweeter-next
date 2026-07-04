@@ -14,8 +14,7 @@ declare global {
     email: string;
     password: string;
   }
-  interface UserCreateInput
-    extends Partial<Pick<User, "username">>, UserLoginInput {}
+  interface UserCreateInput extends Pick<User, "username">, UserLoginInput {}
 
   interface Tweet {
     id: string;

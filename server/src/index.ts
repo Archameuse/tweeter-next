@@ -15,8 +15,17 @@ import { HTTPException } from "hono/http-exception";
 import z, { ZodError } from "zod";
 import { db } from "./db/index.js";
 import { sql } from "drizzle-orm";
+import { cors } from "hono/cors";
 
 const app = new Hono();
+
+app.use(
+  "*",
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    credentials: true,
+  }),
+);
 
 app.onError((err, c) => {
   console.error(err);

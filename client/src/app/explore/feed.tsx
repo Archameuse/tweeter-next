@@ -32,7 +32,7 @@ export default function ExploreFeed() {
       replies: 5,
       retweets: 12,
       hashtag: "#webdev",
-      image: "/temp/ (3).mp4",
+      image: "/temp/ (10).mp4",
       liked: true,
       saved: false,
       retweeted: false,

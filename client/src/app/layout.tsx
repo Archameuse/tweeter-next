@@ -4,6 +4,9 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { ThemeProvider } from "@teispace/next-themes";
 import PostModal from "@/components/post/postModal";
+import { UserProvider } from "@/providers/UserProvider";
+import { COOKIE_NAME, fetchMe } from "@/utils/userHelpers";
+import { cookies } from "next/headers";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -23,22 +26,26 @@ export const metadata: Metadata = {
   description: "devchallenges.io challenge",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookie = (await cookies()).get(COOKIE_NAME)?.value;
+  const initialUser = await fetchMe(cookie);
   return (
     <html
       lang="en"
-      className={`${poppins.variable} h-full antialiased`}
+      className={`${poppins.variable} ${notoSans.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="bg-background min-h-full flex flex-col font-poppins font-medium overflow-x-hidden">
         <ThemeProvider>
-          <Header />
-          {children}
-          <PostModal />
+          <UserProvider initialUser={initialUser}>
+            <Header />
+            {children}
+            <PostModal />
+          </UserProvider>
         </ThemeProvider>
       </body>
     </html>

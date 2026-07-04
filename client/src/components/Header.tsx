@@ -8,10 +8,12 @@ import Link, { LinkProps } from "next/link";
 import { usePathname } from "next/navigation";
 import { UserAvatar } from "./ui/userAvatar";
 import { ActionButton } from "./ui/actionButton";
+import { useUser } from "@/providers/UserProvider";
 
 export function Header() {
   const [expanded, setExpanded] = useState(false);
-  const [user, setUser] = useState(true);
+  // const [user, setUser] = useState(true);
+  const { user, logout } = useUser();
   const route = usePathname();
   const { theme, setTheme } = useTheme();
 
@@ -20,7 +22,7 @@ export function Header() {
   const isBookmarks = route === "/bookmarks";
 
   const signOut = async () => {
-    setUser(false);
+    await logout();
   };
 
   return (

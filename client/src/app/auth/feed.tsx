@@ -1,17 +1,37 @@
 "use client";
 import { ActionButton } from "@/components/ui/actionButton";
+import { useUser } from "@/providers/UserProvider";
 import { useState } from "react";
+import z from "zod";
 
 enum AUTH_TYPE {
   signIn,
   signUp,
 }
 
+const loginSchema = z.object({
+  email: z.string(),
+  password: z.string(),
+});
+const createSchema = loginSchema.extend({
+  username: z.string(),
+});
+
 export default function SignInFeed() {
   const [authType, setAuthType] = useState<AUTH_TYPE>(AUTH_TYPE.signIn);
-
-  const handleAuth = (e: React.SubmitEvent) => {
+  const { login, create, error } = useUser();
+  const handleAuth = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const formValues = Object.fromEntries(formData.entries());
+    if (authType === AUTH_TYPE.signIn) {
+      await login(loginSchema.parse(formValues));
+    } else if (authType === AUTH_TYPE.signUp) {
+      await create(createSchema.parse(formValues));
+    }
+    if (error) {
+      alert(error);
+    }
   };
 
   return (
