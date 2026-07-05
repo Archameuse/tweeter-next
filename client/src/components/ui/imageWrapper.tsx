@@ -5,8 +5,8 @@ export default function ImageWrapper({
   alt,
   className,
   ...props
-}: Partial<ImageProps> & {
-  src?: string;
+}: Partial<Omit<ImageProps, "src">> & {
+  src?: string | null;
   alt?: string;
 }) {
   return (

@@ -15,7 +15,7 @@ export default function ImageCropModal({
   onSelect: (src: File) => void;
   onClose: () => void;
 }) {
-  const [cropImage, setCropImage] = useState<string | null>("/temp/ (8).jpg");
+  const [cropImage, setCropImage] = useState<string | null>(null);
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState<number>(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -104,12 +104,14 @@ export default function ImageCropModal({
           </div>
           <div className="pb-4 w-full flex justify-between px-8">
             <button
+              type="button"
               onClick={discardCrop}
               className="inline-block rounded bg-primaryBlue px-6 py-2 text-xs font-medium uppercase leading-normal text-white shadow-sm transition duration-150 ease-in-out hover:bg-secondaryBlue hover:shadow-md focus:bg-primary-accent-300 focus:shadow-primary-2 focus:outline-none focus:ring-0 active:opacity-80 active:shadow-sm active:transition-none"
             >
               Discard
             </button>
             <button
+              type="button"
               onClick={handleCropImage}
               className="inline-block rounded bg-primaryBlue px-6 py-2 text-xs font-medium uppercase leading-normal text-white shadow-sm transition duration-150 ease-in-out hover:bg-secondaryBlue hover:shadow-md focus:bg-primary-accent-300 focus:shadow-primary-2 focus:outline-none focus:ring-0 active:opacity-80 active:shadow-sm active:transition-none"
             >

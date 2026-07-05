@@ -19,18 +19,19 @@ const createSchema = loginSchema.extend({
 
 export default function SignInFeed() {
   const [authType, setAuthType] = useState<AUTH_TYPE>(AUTH_TYPE.signIn);
-  const { login, create, error } = useUser();
+  const { login, create } = useUser();
   const handleAuth = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const formValues = Object.fromEntries(formData.entries());
+    let status;
     if (authType === AUTH_TYPE.signIn) {
-      await login(loginSchema.parse(formValues));
+      status = await login(loginSchema.parse(formValues));
     } else if (authType === AUTH_TYPE.signUp) {
-      await create(createSchema.parse(formValues));
+      status = await create(createSchema.parse(formValues));
     }
-    if (error) {
-      alert(error);
+    if (status?.error) {
+      alert(status.error);
     }
   };
 
@@ -73,15 +74,15 @@ export default function SignInFeed() {
           {authType === AUTH_TYPE.signUp && (
             <div>
               <label
-                htmlFor="name"
+                htmlFor="username"
                 className="block text-sm font-medium leading-6 text-gray-900 dark:text-white"
               >
                 User name
               </label>
               <div className="mt-2">
                 <input
-                  id="name"
-                  name="name"
+                  id="username"
+                  name="username"
                   type="text"
                   autoComplete="name"
                   required

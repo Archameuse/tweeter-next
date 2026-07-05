@@ -1,6 +1,12 @@
 import Image from "next/image";
 
-export function UserAvatar({ src, size }: { src?: string; size: number }) {
+export function UserAvatar({
+  src,
+  size,
+}: {
+  src?: string | null;
+  size: number;
+}) {
   const avatar = src || "/noprofile.svg";
 
   return (

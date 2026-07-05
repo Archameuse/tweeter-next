@@ -87,7 +87,7 @@ export function Header() {
         )}
       </ul>
       <div className="min-w-32 h-full flex items-center justify-center relative group">
-        {user && <HeaderProfile />}
+        {user && <HeaderProfile user={user} />}
         {user ? (
           <div className="absolute z-30 top-full w-full h-0 overflow-clip group-hover:h-20 flex flex-col bg-white dark:bg-primaryBlack transition-[height]">
             <button
@@ -189,21 +189,17 @@ function HeaderButton({
   );
 }
 
-function HeaderProfile() {
-  const user = {
-    name: "User 1",
-    image: `/temp/ (3).jpg`,
-  };
+function HeaderProfile({ user }: { user: User }) {
   return (
     <div className="flex gap-3 items-center">
       <div className="h-8 w-8">
-        <UserAvatar src={user?.image} size={64} />
+        <UserAvatar src={user.avatar} size={64} />
       </div>
       <span
         v-if="user"
         className="text-xs dark:text-white max-w-48 text-ellipsis overflow-hidden font-bold whitespace-nowrap"
       >
-        {user.name}
+        {user.username}
       </span>
     </div>
   );

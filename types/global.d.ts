@@ -48,10 +48,12 @@ declare global {
   }
 
   interface UserSettingsInput extends Partial<
-    Omit<UserSettings, "id" | "followed">
+    Pick<UserSettings, "status" | "username">
   > {
     password?: string;
     email?: string;
+    avatar?: File | null;
+    banner?: File | null;
   }
 
   interface Profile extends UserSettings {

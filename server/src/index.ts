@@ -28,10 +28,10 @@ app.use(
 );
 
 app.onError((err, c) => {
-  console.error(err);
   if (err instanceof HTTPException) {
     return c.json({ message: err.message }, err.status);
   }
+  console.error(err); // logs unexpected and zod errors
   if (err instanceof ZodError) {
     return c.json(
       {
