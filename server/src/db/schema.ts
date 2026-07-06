@@ -51,7 +51,7 @@ export const users = sqliteTable(
   (table) => [
     check(
       "email_validation_check",
-      sql`${table.email} LIKE '%_@_%._%' AND instr(${table.email}, ' ') = 0`,
+      sql`${table.email} LIKE '%_@_%' AND instr(${table.email}, ' ') = 0`,
     ),
     check(
       "username_validation_check",

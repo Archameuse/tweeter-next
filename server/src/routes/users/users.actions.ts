@@ -1,8 +1,8 @@
 import { db } from "@/db/index.js";
-import { follows, users } from "@/db/schema.js";
+import { follows, sessions, users } from "@/db/schema.js";
 import { idNumberSchema, imageSchema } from "@/schema.js";
 import { ActionNoReturnError, User404Error } from "@/utils/standardErrors.js";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, getColumns, ne, sql } from "drizzle-orm";
 import { SQLiteTransaction } from "drizzle-orm/sqlite-core";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -10,10 +10,12 @@ import {
   dbUserSettingsToGlobalUserSettingsSchema,
   followExistQuerySchema,
   FollowExistQueryType,
+  globalUserSettingsSchema,
   globalUserSettingsToDbSettingsSchema,
 } from "./users.schema.js";
 import uploadImage from "@/utils/uploadImage.js";
 import { authMiddleware } from "@/middleware/auth.middleware.js";
+import { clearSessionsByUID, createSession } from "@/utils/sessionsHandlers.js";
 
 const app = new Hono();
 
@@ -136,12 +138,16 @@ app.delete("/follow/:id{\\d+}", authMiddleware, async (c) => {
 });
 
 // settings/:id -> post? -> update settings of specific user
+/**
+ * pass image (or status) as null to remove it
+ */
 app.put("/settings", authMiddleware, async (c) => {
   const authId = c.get("userId");
   const formData = await c.req.formData();
   const updateSettingsData = globalUserSettingsToDbSettingsSchema.parse(
     formData.get("settings"),
   );
+  console.log(globalUserSettingsSchema.parse(formData.get("settings")));
   const avatarImage = imageSchema.parse(formData.get("avatar"));
   const bannerImage = imageSchema.parse(formData.get("banner"));
   // filter out undefined fields
@@ -150,9 +156,13 @@ app.put("/settings", authMiddleware, async (c) => {
   ) as typeof updateSettingsData;
   if (avatarImage) {
     filteredSettingsData.avatar = await uploadImage(avatarImage);
+  } else if (avatarImage === null) {
+    filteredSettingsData.avatar = null;
   }
   if (bannerImage) {
     filteredSettingsData.banner = await uploadImage(bannerImage);
+  } else if (bannerImage === null) {
+    filteredSettingsData.banner = null;
   }
   if (filteredSettingsData.username || filteredSettingsData.email) {
     const [exists] = await db
@@ -176,12 +186,26 @@ app.put("/settings", authMiddleware, async (c) => {
   if (filteredSettingsData.password) {
     // update password with hashed password but for now keep updated password IGNORE IT FOR NOW
   }
+  if (Object.keys(filteredSettingsData).length < 1)
+    throw new HTTPException(409, { message: "Empty request" });
   const [res] = await db
     .update(users)
     .set(filteredSettingsData)
     .where(eq(users.user_id, authId))
-    .returning();
+    .returning({
+      user_id: users.user_id,
+      username: users.username,
+      email: users.email,
+      avatar: users.avatar,
+      banner: users.banner,
+      status: users.status,
+    });
   if (!res) throw new User404Error(authId);
+  // invalidating sessions since password is changed
+  if (filteredSettingsData.password) {
+    await clearSessionsByUID(authId);
+    await createSession({ userId: authId, c, skipDeletion: true });
+  }
   return c.json(dbUserSettingsToGlobalUserSettingsSchema.parse(res), 201);
 });
 

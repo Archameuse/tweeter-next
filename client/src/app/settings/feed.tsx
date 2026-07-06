@@ -3,35 +3,116 @@
 import ActionIcon from "@/components/actionIcon";
 import ImageCropModal from "@/components/modals/imageCropModal";
 import ImageUploadModal from "@/components/modals/imageUploadModal";
-import { ActionButton } from "@/components/ui/actionButton";
+import { ActionButton, BUTTON_VERSIONS } from "@/components/ui/actionButton";
 import ImageWrapper from "@/components/ui/imageWrapper";
 import validateImage from "@/utils/validateImage";
-import { LucideImageMinus } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
+import { CheckCircleIcon, LucideImageMinus } from "lucide-react";
+import { useState } from "react";
+import axios, { AxiosError } from "axios";
+import { API_URL } from "@/utils/userHelpers";
+import { useUser } from "@/providers/UserProvider";
+import {
+  emailSchema,
+  passwordSchema,
+  usernameSchema,
+} from "@/utils/zodSchemas";
 
-const mockUser: UserSettings = {
-  id: "1",
-  username: "Cool-User",
-  banner: "/temp/ (23).jpg",
-  avatar: "/temp/ (1).jpg",
-  status: "My status",
-};
-export default function SettingsFeed() {
-  const [user, setUser] = useState<UserSettings>(mockUser);
+/**
+ *
+ * Need not to forget to add password here and email maybe at some point
+ * + important to add account deletion
+ */
+export default function SettingsFeed({
+  userSettings,
+}: {
+  userSettings: UserSettings;
+}) {
+  const { refresh: refreshUser } = useUser();
+  const [localUserSettings, setLocalUserSettings] =
+    useState<UserSettings>(userSettings);
   const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(
-    user.avatar,
+    userSettings.avatar,
   );
   const [bannerUrl, setBannerUrl] = useState<string | null | undefined>(
-    user.banner,
+    userSettings.banner,
+  );
+  const [avatarFile, setAvatarFile] = useState<File | "null" | undefined>(
+    undefined,
+  );
+  const [bannerFile, setBannerFile] = useState<File | "null" | undefined>(
+    undefined,
   );
   const [avatarProgress, setAvatarProgress] = useState<number>(0);
   const [bannerProgress, setBannerProgress] = useState<number>(0);
   const [showBannerModal, setShowBannerModal] = useState<boolean>(false);
   const [showAvatarModal, setShowAvatarModal] = useState<boolean>(false);
-
-  const { register, handleSubmit, setValue, reset } =
-    useForm<UserSettingsInput>();
+  // const isPending = true;
+  const { mutate, isPending } = useMutation({
+    mutationFn: async (data: FormData) => {
+      // console.log(Object.fromEntries(data.entries()));
+      const avatarSize = avatarFile instanceof File ? avatarFile.size : 0;
+      const bannerSize = bannerFile instanceof File ? bannerFile.size : 0;
+      const res = await axios.put(`${API_URL}/users/settings`, data, {
+        withCredentials: true,
+        // headers: {
+        //   "Content-Type": "multipart/form-data",
+        // },
+        /**
+         *
+         * This function does not do 100% correct calculation so bars are slightly off especially for smaller files and bigger texts
+         * Still, they are close enough for fine UX and for smaller files, realistically they should be uploaded in 1-2 triggers so whatever anyway
+         */
+        onUploadProgress: (progress) => {
+          if (avatarSize > 0) {
+            const avatarLoad = Math.min(
+              Math.floor((progress.loaded / avatarSize) * 100),
+              100,
+            );
+            setAvatarProgress((prev) => (prev <= 100 ? avatarLoad : prev));
+          }
+          if (bannerSize > 0) {
+            const bannerLoad = Math.max(
+              Math.min(
+                Math.floor(((progress.loaded - avatarSize) / bannerSize) * 100),
+                100,
+              ),
+              0,
+            );
+            setBannerProgress((prev) => (prev <= 100 ? bannerLoad : prev));
+          }
+        },
+      });
+      return res.data;
+    },
+    onSuccess: async (newUser: UserSettings) => {
+      await refreshUser();
+      setLocalUserSettings(newUser);
+      setAvatarFile(undefined);
+      setBannerFile(undefined);
+      alert("Success");
+    },
+    onError: (err) => {
+      if (err instanceof AxiosError) {
+        const errorMessage = err.response?.data.message;
+        if (typeof errorMessage === "string") {
+          if (errorMessage.length < 60) alert(errorMessage);
+          return console.error(err.response?.data);
+        }
+      }
+      alert("Unknown error");
+      // if (err.message.length < 60) {
+      //   alert(err.message);
+      // } else {
+      //   alert("Error");
+      //   console.error(err.message);
+      // }
+    },
+    onSettled: () => {
+      setAvatarProgress(0);
+      setBannerProgress(0);
+    },
+  });
 
   const openAvatarModal = () => {
     setShowAvatarModal(true);
@@ -45,7 +126,7 @@ export default function SettingsFeed() {
     if (bannerUrl && bannerUrl.startsWith("blob:"))
       URL.revokeObjectURL(bannerUrl);
     setBannerUrl(localUrl);
-    setValue("banner", file);
+    setBannerFile(file);
     setShowBannerModal(false);
   };
 
@@ -54,7 +135,7 @@ export default function SettingsFeed() {
     if (avatarUrl && avatarUrl.startsWith("blob:"))
       URL.revokeObjectURL(avatarUrl);
     setAvatarUrl(localUrl);
-    setValue("avatar", file);
+    setAvatarFile(file);
     setShowAvatarModal(false);
   };
 
@@ -62,103 +143,139 @@ export default function SettingsFeed() {
     if (bannerUrl && bannerUrl.startsWith("blob:"))
       URL.revokeObjectURL(bannerUrl);
     setBannerUrl(null);
-    setValue("banner", null);
+    setBannerFile("null");
   };
 
   const clearAvatar = () => {
     if (avatarUrl && avatarUrl.startsWith("blob:"))
       URL.revokeObjectURL(avatarUrl);
     setAvatarUrl(null);
-    setValue("avatar", null);
+    setAvatarFile("null");
   };
 
-  /**
-   *
-   * Need not to forget to add password here and email maybe at some point
-   */
-  const updateSettings = (data: UserSettingsInput) => {
-    const payload = { ...data };
-    if (payload.username === user.username) payload.username = undefined;
-    if (payload.status === user.status) payload.status = undefined;
-    console.log(payload);
-  };
-
-  const handleReset = (e: React.SyntheticEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const settings: UserSettingsInput = {};
+    const localFormData = new FormData(e.currentTarget);
+    const formData = new FormData();
+    const formUsername = localFormData.get("username")?.toString();
+    const formEmail = localFormData.get("email")?.toString();
+    const formPassword = localFormData.get("password")?.toString();
+    const formConfirmPassword = localFormData
+      .get("confirm-password")
+      ?.toString();
+    const formStatus = localFormData.get("status")?.toString();
+    if (formUsername && formUsername !== localUserSettings.username) {
+      const result = usernameSchema.safeParse(formUsername);
+      if (!result.success) return alert(result.error.issues[0]?.message);
+      settings.username = formUsername;
+    }
+    if (formEmail && formEmail !== localUserSettings.email) {
+      const result = emailSchema.safeParse(formEmail);
+      if (!result.success) return alert(result.error.issues[0]?.message);
+      settings.email = formEmail;
+    }
+    if (formStatus !== (localUserSettings.status || "")) {
+      //if no status we want to pass it as null still so it can clear
+      settings.status = formStatus || null;
+    }
+    if (formPassword) {
+      // might add validation here at some point
+      // if(formPassword.length < 8) return alert("New password should be at least 8 characters long")
+      const result = passwordSchema.safeParse(formPassword);
+      if (!result.success) return alert(result.error.issues[0]?.message);
+      if (!formConfirmPassword)
+        return alert("Make sure you entered confirm password");
+      if (formPassword !== formConfirmPassword)
+        return alert(
+          "Make sure your confirm password is the same as actual password",
+        );
+      settings.password = formPassword;
+    }
+    if (Object.keys(settings).length)
+      formData.append("settings", JSON.stringify(settings));
+    if (avatarFile !== undefined) formData.append("avatar", avatarFile);
+    if (bannerFile !== undefined) formData.append("banner", bannerFile);
+    if (!formData.entries().next().done) mutate(formData);
+    else alert("Can't submit form without changes");
+  };
+
+  const handleReset = () => {
+    // e.preventDefault();
     if (bannerUrl && bannerUrl.startsWith("blob:"))
       URL.revokeObjectURL(bannerUrl);
     if (avatarUrl && avatarUrl.startsWith("blob:"))
       URL.revokeObjectURL(avatarUrl);
-    setBannerUrl(user.banner);
-    setAvatarUrl(user.avatar);
-    reset();
+    setBannerUrl(localUserSettings.banner);
+    setBannerFile(undefined);
+    setAvatarUrl(localUserSettings.avatar);
+    setAvatarFile(undefined);
   };
-  useEffect(() => {
-    register("avatar");
-    register("banner");
-  }, [register]);
 
-  if (!user) return null; // should be 404 realistically
   return (
     <form
       className="w-full flex flex-col items-center gap-10"
-      onSubmit={handleSubmit(updateSettings)}
+      onSubmit={handleSubmit}
       onReset={handleReset}
     >
       <div className="flex w-full justify-center p-4 text-primaryGray border-b-gray-300 border-b">
         <h1 className="text-2xl w-full max-w-5xl">Settings</h1>
       </div>
       <div className="w-full max-w-5xl flex flex-col items-center gap-8">
-        <div className="flex justify-end w-full gap-4 items-center">
-          <label htmlFor="username" className="w-40 text-right">
-            Username
-          </label>
-          <input
-            {...register("username", { required: true })}
-            className="w-full bg-white border p-1 dark:bg-primaryBlack rounded-md"
-            defaultValue={user.username}
-            placeholder={user.username}
-          />
-        </div>
-        <div className="flex justify-end w-full gap-4 items-center">
-          <label htmlFor="status" className="w-40 text-right">
-            Status
-          </label>
-          <input
-            {...register("status")}
-            className="w-full bg-white border p-1 dark:bg-primaryBlack rounded-md"
-            defaultValue={user.status || ""}
-            placeholder={user.status || ""}
-          />
-        </div>
+        <FormInput
+          defaultValue={localUserSettings.username}
+          labelText="Username"
+          nameId="username"
+          required
+          disabled={isPending}
+        />
+        <FormInput
+          defaultValue={localUserSettings.status || ""}
+          labelText="Status"
+          nameId="status"
+          disabled={isPending}
+        />
+        <FormInput
+          defaultValue={localUserSettings.email}
+          labelText="Email"
+          nameId="email"
+          type="email"
+          required
+          disabled={isPending}
+        />
+        <FormInput
+          labelText="Password"
+          nameId="password"
+          type="password"
+          disabled={isPending}
+        />
+        <FormInput
+          labelText="Confirm password"
+          nameId="confirm-password"
+          type="password"
+          disabled={isPending}
+        />
         <div className="flex justify-end w-full gap-4">
           <label className="w-40 text-right">User avatar</label>
           <div className="w-full flex flex-wrap space-x-20 space-y-4">
             <div className="w-40 aspect-square relative rounded-2xl overflow-hidden border-4 border-primaryGray shadow-md">
-              {avatarProgress > 0 && (
-                <div className="absolute w-full h-full top-0 left-0 z-20 flex flex-col justify-center">
-                  <div className="w-full bg-gray-200 rounded-full dark:bg-gray-700">
-                    <div
-                      className="bg-blue-600 text-xs select-none font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
-                      style={{ width: avatarProgress + "%" }}
-                    >
-                      {avatarProgress}%
-                    </div>
-                  </div>
-                </div>
-              )}
+              <Loadbar progress={avatarProgress} />
               <ImageWrapper
                 className={avatarProgress > 0 ? "blur-md" : ""}
                 src={avatarUrl}
               />
-              {avatarUrl && (
+              {avatarUrl && !isPending && (
                 <div className="size-8 absolute right-4 top-4">
                   <ActionIcon icon={LucideImageMinus} onClick={clearAvatar} />
                 </div>
               )}
             </div>
             <div className="flex flex-col justify-center">
-              <ActionButton type="button" onClick={openAvatarModal}>
+              <ActionButton
+                type="button"
+                onClick={openAvatarModal}
+                disabled={isPending}
+              >
                 Upload
               </ActionButton>
             </div>
@@ -168,32 +285,30 @@ export default function SettingsFeed() {
           <label className="w-40 text-right">Profile banner</label>
           <div className="w-full flex flex-col gap-4 items-center">
             <div className="w-full h-60 relative rounded-2xl overflow-hidden border-4 border-primaryGray shadow-md">
-              {bannerProgress > 0 && (
-                <div className="absolute w-full h-full top-0 left-0 z-20 flex flex-col justify-center">
-                  <div className="w-full bg-gray-200 rounded-full dark:bg-gray-700">
-                    <div
-                      className="bg-blue-600 text-xs select-none font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
-                      style={{ width: bannerProgress + "%" }}
-                    >
-                      {bannerProgress}%
-                    </div>
-                  </div>
-                </div>
-              )}
+              <Loadbar progress={bannerProgress} />
               {bannerUrl && (
                 <>
                   <ImageWrapper
                     className={bannerProgress > 0 ? "blur-md" : ""}
                     src={bannerUrl}
                   />
-                  <div className="size-8 absolute right-4 top-4">
-                    <ActionIcon icon={LucideImageMinus} onClick={clearBanner} />
-                  </div>
+                  {!isPending && (
+                    <div className="size-8 absolute right-4 top-4">
+                      <ActionIcon
+                        icon={LucideImageMinus}
+                        onClick={clearBanner}
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </div>
             <div className="flex flex-col justify-center w-40">
-              <ActionButton type="button" onClick={openBannerModal}>
+              <ActionButton
+                type="button"
+                onClick={openBannerModal}
+                disabled={isPending}
+              >
                 Upload
               </ActionButton>
             </div>
@@ -201,18 +316,27 @@ export default function SettingsFeed() {
         </div>
         <div className="w-full flex gap-4 pl-40">
           <div className="flex w-full max-w-96 m-auto justify-between">
-            <button
+            <ActionButton
               type="reset"
-              className="cursor-pointer text-red-700 hover:text-white border border-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2"
+              disabled={isPending}
+              className="mr-2 mb-2"
+              version={BUTTON_VERSIONS.discard}
             >
               Discard
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
+              type="submit"
+              disabled={isPending}
+              version={BUTTON_VERSIONS.green}
+              className="mr-2 mb-2"
+            >
+              Accept
+            </ActionButton>
+            {/* <button
               type="submit"
               className="cursor-pointer focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 mr-2 mb-2"
             >
-              Accept
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
@@ -227,5 +351,59 @@ export default function SettingsFeed() {
         onSelect={handleSelectAvatar}
       />
     </form>
+  );
+}
+
+function Loadbar({ progress }: { progress: number }) {
+  if (progress <= 0) return null;
+
+  return (
+    <div className="absolute w-full h-full top-0 left-0 z-20 flex flex-col justify-center px-2">
+      {progress < 100 ? (
+        <div className="w-full bg-gray-300 rounded-full dark:bg-gray-700 ">
+          <div
+            className="bg-blue-600 text-xs select-none font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
+            style={{ width: progress + "%" }}
+          >
+            {progress}%
+          </div>
+        </div>
+      ) : (
+        <div className="flex justify-center items-center">
+          <CheckCircleIcon className="h-12 w-12 text-green-400" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FormInput({
+  disabled,
+  defaultValue,
+  labelText,
+  nameId,
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<"input"> & {
+  disabled?: boolean;
+  defaultValue?: string;
+  labelText: string;
+  nameId: string;
+}) {
+  return (
+    <div className="flex justify-end w-full gap-4 items-center">
+      <label htmlFor={nameId} className="w-40 text-right">
+        {labelText}
+      </label>
+      <input
+        disabled={disabled}
+        name={nameId}
+        id={nameId}
+        className={`${className ? className : ""} w-full bg-white border p-1 dark:bg-primaryBlack rounded-md disabled:opacity-60`}
+        defaultValue={defaultValue || ""}
+        placeholder={defaultValue || ""}
+        {...props}
+      />
+    </div>
   );
 }

@@ -161,6 +161,7 @@ app.get("/", optionalAuthMiddleware, async (c) => {
       avatar: true,
       username: true,
       ...(processedScope !== USER_SCOPE.user && { banner: true, status: true }),
+      ...(processedScope === USER_SCOPE.settings && { email: true }),
     },
     extras: {
       ...(authId &&

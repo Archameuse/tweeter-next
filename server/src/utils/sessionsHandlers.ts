@@ -61,15 +61,19 @@ export const deleteSession = async ({
 export const createSession = async ({
   dbOrTx = db,
   userId,
+  skipDeletion,
   c,
 }: {
   c: Context;
   userId: number | string;
+  skipDeletion?: boolean;
   dbOrTx?: typeof db | SQLiteTransaction<"async", any, any>;
 }) => {
-  const prevSession = getCookie(c, COOKIE_NAME);
-  if (prevSession) {
-    await deleteSession({ sessionId: prevSession, dbOrTx });
+  if (!skipDeletion) {
+    const prevSession = getCookie(c, COOKIE_NAME);
+    if (prevSession) {
+      await deleteSession({ sessionId: prevSession, dbOrTx });
+    }
   }
   // const sessionId = crypto.randomUUID();
   const MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7 days
@@ -174,4 +178,17 @@ export const refreshSession = async ({
     maxAge: MAX_AGE_SEC,
     priority: "High",
   });
+};
+
+export const clearSessionsByUID = async (userId: number) => {
+  const discardedSessions = await db.query.sessions.findMany({
+    columns: { session_id: true },
+    where: { user_id: userId },
+  });
+  await db.delete(sessions).where(eq(sessions.user_id, userId));
+  for (const { session_id } of discardedSessions) {
+    try {
+      sessionsCache.del(session_id);
+    } catch {}
+  }
 };

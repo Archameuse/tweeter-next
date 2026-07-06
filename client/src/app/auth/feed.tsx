@@ -1,6 +1,7 @@
 "use client";
 import { ActionButton } from "@/components/ui/actionButton";
 import { useUser } from "@/providers/UserProvider";
+import { passwordSchema } from "@/utils/zodSchemas";
 import { useState } from "react";
 import z from "zod";
 
@@ -28,7 +29,10 @@ export default function SignInFeed() {
     if (authType === AUTH_TYPE.signIn) {
       status = await login(loginSchema.parse(formValues));
     } else if (authType === AUTH_TYPE.signUp) {
-      status = await create(createSchema.parse(formValues));
+      const data = createSchema.parse(formValues);
+      const parsePassword = passwordSchema.safeParse(data.password);
+      if (!parsePassword.success) return alert(parsePassword.error);
+      status = await create(data);
     }
     if (status?.error) {
       alert(status.error);

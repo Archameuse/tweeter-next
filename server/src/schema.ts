@@ -3,14 +3,19 @@ import z from "zod";
 const MAX_SIZE = 20;
 
 export const imageSchema = z.preprocess(
-  (val) => (val instanceof File && val.size === 0 ? null : val),
+  (val) => {
+    if (val === "null") return null;
+    if (!val || (val instanceof File && val.size === 0)) return undefined;
+    return val;
+  },
   z
     .file({ error: `Image should be a file` })
     .min(50, { error: `Min size - 50 bytes` })
     .max(MAX_SIZE * 1024 * 1024, { error: `Max size - ${MAX_SIZE} mb` })
-    .mime(["image/jpeg", "image/png", "image/webp", "image/gif"]) //remove gif eventually
-    .optional()
-    .nullable(),
+    .mime(["image/jpeg", "image/png", "image/webp", "image/gif"], {
+      error: "Wrong image extension",
+    }) //remove gif eventually
+    .nullish(),
 );
 
 export const imageLinkSchema = z.string();

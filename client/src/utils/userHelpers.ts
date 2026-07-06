@@ -1,4 +1,7 @@
 export const COOKIE_NAME = process.env.NEXT_PUBLIC_COOKIE_NAME || "session_id";
+/**
+ * actual request should start with /
+ */
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -28,11 +31,11 @@ export const fetchMe = async (cookie?: string): Promise<User | null> => {
  * @param path Should start with /
  * @param options Credentials: 'include' by default and headers application/json
  */
-export const fetchUser = async (
+export const fetchUser = async <T = User>(
   path: string,
-  options: RequestInit = {},
-): Promise<{ data: User | null; error: string | null }> => {
-  let data: User | null = null;
+  { cookie, ...options }: RequestInit & { cookie?: string } = {},
+): Promise<{ data: T | null; error: string | null }> => {
+  let data: T | null = null;
   let error: string | null = null;
   try {
     const res = await fetch(`${API_URL}${path}`, {
@@ -40,6 +43,7 @@ export const fetchUser = async (
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        ...(cookie && { Cookie: `${COOKIE_NAME}=${cookie}` }),
         ...options.headers,
       },
     });

@@ -45,6 +45,7 @@ declare global {
   interface UserSettings extends User {
     banner?: string | null;
     status?: string | null;
+    email: string;
   }
 
   interface UserSettingsInput extends Partial<
@@ -56,7 +57,7 @@ declare global {
     banner?: File | null;
   }
 
-  interface Profile extends UserSettings {
+  interface Profile extends Omit<UserSettings, "email"> {
     followers: number;
     following: number;
   }

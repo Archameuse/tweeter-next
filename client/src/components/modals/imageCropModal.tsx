@@ -57,7 +57,8 @@ export default function ImageCropModal({
       );
       canvas.toBlob((blob) => {
         if (!blob) return console.log("error getting blob from canvas");
-        onSelect(new File([blob], "CroppedImage.webp"));
+        onSelect(new File([blob], "CroppedImage.webp", { type: "image/webp" }));
+        setCropImage(null);
       });
     };
     img.onerror = () => {

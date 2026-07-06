@@ -4,6 +4,7 @@
     "checkperiod",
     "citext",
     "conninfo",
+    "Loadbar",
     "NOCASE",
     "noprofile",
     "teispace",

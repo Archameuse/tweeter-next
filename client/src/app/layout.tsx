@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import { Noto_Sans, Poppins } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
-import { ThemeProvider } from "@teispace/next-themes";
 import PostModal from "@/components/post/postModal";
-import { UserProvider } from "@/providers/UserProvider";
-import { COOKIE_NAME, fetchMe } from "@/utils/userHelpers";
-import { cookies } from "next/headers";
+import { fetchMe } from "@/utils/userHelpers";
+import { Providers } from "@/providers/providers";
+import { getServerCookie } from "@/utils/serverUserHelpers";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -31,8 +30,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookie = (await cookies()).get(COOKIE_NAME)?.value;
-  const initialUser = await fetchMe(cookie);
+  const initialUser = await fetchMe(await getServerCookie());
+
   return (
     <html
       lang="en"
@@ -40,13 +39,11 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="bg-background min-h-full flex flex-col font-poppins font-medium overflow-x-hidden">
-        <ThemeProvider>
-          <UserProvider initialUser={initialUser}>
-            <Header />
-            {children}
-            <PostModal />
-          </UserProvider>
-        </ThemeProvider>
+        <Providers initialUser={initialUser}>
+          <Header />
+          {children}
+          <PostModal />
+        </Providers>
       </body>
     </html>
   );

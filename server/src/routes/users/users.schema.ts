@@ -28,6 +28,7 @@ export enum FOLLOW_SCOPE {
 export const dbUserSettingsSchema = dbUserSchema.extend({
   banner: imageLinkSchema.nullish().catch(null),
   status: imageLinkSchema.nullish().catch(null),
+  email: emailSchema,
 });
 
 export const dbUserSettingsToGlobalUserSettingsSchema =
@@ -39,6 +40,7 @@ export const dbUserSettingsToGlobalUserSettingsSchema =
       followed: db.is_followed,
       banner: db.banner,
       status: db.status,
+      email: db.email,
     }),
   );
 
@@ -66,9 +68,9 @@ export const globalUserSettingsSchema = z.preprocess(
       try {
         return JSON.parse(val);
       } catch {
-        return val;
+        return {};
       }
-    return val;
+    return {};
   },
   z.object({
     username: usernameSchema.optional(),

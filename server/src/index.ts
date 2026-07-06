@@ -35,7 +35,9 @@ app.onError((err, c) => {
   if (err instanceof ZodError) {
     return c.json(
       {
-        message: "Validation Error",
+        message:
+          "Validation Error" +
+          (err.issues[0]?.message ? `: ${err.issues[0].message}` : ""),
         errors: z.treeifyError(err),
       },
       400,
