@@ -12,6 +12,10 @@ export const loginUserSchema = z.object({
   password: passwordSchema,
 }) satisfies z.ZodType<UserLoginInput>;
 
+export const deleteUserSchema = z.object({
+  password: passwordSchema,
+});
+
 // not sure if I need to preprocess?
 // export const createUserSchema = z.preprocess(
 //   (val) => {

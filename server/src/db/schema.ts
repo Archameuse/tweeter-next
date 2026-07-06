@@ -131,7 +131,10 @@ export const tweets = sqliteTable(
     image: text("image", { mode: "text" }),
     user_id: integer("user_id", { mode: "number" })
       .notNull()
-      .references(() => users.user_id),
+      .references(() => users.user_id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
     reply_to: integer("reply_to", { mode: "number" }),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()

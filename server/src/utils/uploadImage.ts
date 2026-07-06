@@ -1,4 +1,3 @@
-import { v4 } from "uuid";
 import sharp from "sharp";
 import { mkdir, writeFile } from "fs/promises";
 import path from "node:path";
@@ -7,8 +6,8 @@ import path from "node:path";
 export default async function uploadImage(image: File): Promise<string> {
   // return "/tempUploads/04b211f9-3922-4979-8a67-fdcbe6efda43.webp";
   const buffer = Buffer.from(await image.arrayBuffer());
-  const webpBuffer = await sharp(buffer).webp().toBuffer();
-  const filename = `${v4()}.webp`;
+  const webpBuffer = await sharp(buffer, { animated: true }).webp().toBuffer();
+  const filename = `${crypto.randomUUID()}.webp`;
   const uploadDir = "../client/public/tempUploads";
   //   return path.join(uploadDir, filename);
   await mkdir(uploadDir, { recursive: true });

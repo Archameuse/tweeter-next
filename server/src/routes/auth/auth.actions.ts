@@ -2,12 +2,20 @@ import { db } from "@/db/index.js";
 import { users } from "@/db/schema.js";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { UnauthenticatedError } from "@/utils/standardErrors.js";
-import { createSession, deleteSession } from "@/utils/sessionsHandlers.js";
+import { UnauthenticatedError, User404Error } from "@/utils/standardErrors.js";
+import {
+  clearSessionsByUID,
+  createSession,
+  deleteSession,
+} from "@/utils/sessionsHandlers.js";
 import { authMiddleware } from "@/middleware/auth.middleware.js";
-import { createUserSchema, loginUserSchema } from "./auth.schema.js";
+import {
+  createUserSchema,
+  deleteUserSchema,
+  loginUserSchema,
+} from "./auth.schema.js";
 import { dbUserToGlobalUserSchema } from "@/schema.js";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const app = new Hono();
 
@@ -83,6 +91,26 @@ app.post("/login", async (c) => {
 app.post("/logout", authMiddleware, async (c) => {
   const sessionId = c.get("sessionId");
   await deleteSession({ sessionId, c });
+  return c.body(null, 204);
+});
+
+app.post("/delete", authMiddleware, async (c) => {
+  const body = await c.req.json();
+  const { password } = deleteUserSchema.parse(body);
+  const userId = c.get("userId");
+  const actualPassword = (
+    await db.query.users.findFirst({
+      columns: { password: true },
+      where: { user_id: userId },
+    })
+  )?.password;
+  if (!actualPassword) throw new User404Error(userId);
+  //compare hash but for now just raw comparison
+  if (password !== actualPassword)
+    throw new HTTPException(409, { message: "Wrong password" });
+  await clearSessionsByUID(userId);
+  await deleteSession({ c });
+  await db.delete(users).where(eq(users.user_id, userId));
   return c.body(null, 204);
 });
 

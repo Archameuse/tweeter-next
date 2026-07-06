@@ -6,7 +6,7 @@ import ImageUploadModal from "@/components/modals/imageUploadModal";
 import { ActionButton, BUTTON_VERSIONS } from "@/components/ui/actionButton";
 import ImageWrapper from "@/components/ui/imageWrapper";
 import validateImage from "@/utils/validateImage";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useMutationState } from "@tanstack/react-query";
 import { CheckCircleIcon, LucideImageMinus } from "lucide-react";
 import { useState } from "react";
 import axios, { AxiosError } from "axios";
@@ -50,14 +50,10 @@ export default function SettingsFeed({
   // const isPending = true;
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: FormData) => {
-      // console.log(Object.fromEntries(data.entries()));
       const avatarSize = avatarFile instanceof File ? avatarFile.size : 0;
       const bannerSize = bannerFile instanceof File ? bannerFile.size : 0;
       const res = await axios.put(`${API_URL}/users/settings`, data, {
         withCredentials: true,
-        // headers: {
-        //   "Content-Type": "multipart/form-data",
-        // },
         /**
          *
          * This function does not do 100% correct calculation so bars are slightly off especially for smaller files and bigger texts
@@ -101,16 +97,35 @@ export default function SettingsFeed({
         }
       }
       alert("Unknown error");
-      // if (err.message.length < 60) {
-      //   alert(err.message);
-      // } else {
-      //   alert("Error");
-      //   console.error(err.message);
-      // }
     },
     onSettled: () => {
       setAvatarProgress(0);
       setBannerProgress(0);
+    },
+  });
+
+  const { mutate: deleteUser, isPending: pendingDeletion } = useMutation({
+    mutationFn: async (password: string) => {
+      const res = await axios.post(
+        `${API_URL}/auth/delete`,
+        { password },
+        { withCredentials: true },
+      );
+      return res.data;
+    },
+    onError: (err) => {
+      if (err instanceof AxiosError) {
+        const errorMessage = err.response?.data.message;
+        if (typeof errorMessage === "string") {
+          if (errorMessage.length < 60) alert(errorMessage);
+          return console.error(err.response?.data);
+        }
+      }
+      alert("Unknown error");
+    },
+    onSuccess: async () => {
+      alert("Success");
+      await refreshUser();
     },
   });
 
@@ -212,14 +227,37 @@ export default function SettingsFeed({
     setAvatarFile(undefined);
   };
 
+  const handleDelete = async () => {
+    const confirmationUsername = prompt(
+      "If you sure you want to delete you profile, enter your username",
+    );
+    if (!confirmationUsername) return;
+    if (confirmationUsername !== localUserSettings.username)
+      return alert("Wrong username");
+    const confirmationPassword = prompt(
+      "If you want to proceed, enter correct password",
+    );
+    if (!confirmationPassword) return;
+    deleteUser(confirmationPassword);
+  };
+
+  const disabledForm = isPending || pendingDeletion;
+
   return (
     <form
       className="w-full flex flex-col items-center gap-10"
       onSubmit={handleSubmit}
       onReset={handleReset}
     >
-      <div className="flex w-full justify-center p-4 text-primaryGray border-b-gray-300 border-b">
-        <h1 className="text-2xl w-full max-w-5xl">Settings</h1>
+      <div className="flex w-full flex-wrap justify-between p-4 text-primaryGray border-b-gray-300 border-b">
+        <h1 className="text-2xl">Settings</h1>
+        <ActionButton
+          version={BUTTON_VERSIONS.discard}
+          onClick={handleDelete}
+          disabled={disabledForm}
+        >
+          DELETE
+        </ActionButton>
       </div>
       <div className="w-full max-w-5xl flex flex-col items-center gap-8">
         <FormInput
@@ -227,13 +265,13 @@ export default function SettingsFeed({
           labelText="Username"
           nameId="username"
           required
-          disabled={isPending}
+          disabled={disabledForm}
         />
         <FormInput
           defaultValue={localUserSettings.status || ""}
           labelText="Status"
           nameId="status"
-          disabled={isPending}
+          disabled={disabledForm}
         />
         <FormInput
           defaultValue={localUserSettings.email}
@@ -241,19 +279,19 @@ export default function SettingsFeed({
           nameId="email"
           type="email"
           required
-          disabled={isPending}
+          disabled={disabledForm}
         />
         <FormInput
           labelText="Password"
           nameId="password"
           type="password"
-          disabled={isPending}
+          disabled={disabledForm}
         />
         <FormInput
           labelText="Confirm password"
           nameId="confirm-password"
           type="password"
-          disabled={isPending}
+          disabled={disabledForm}
         />
         <div className="flex justify-end w-full gap-4">
           <label className="w-40 text-right">User avatar</label>
@@ -264,7 +302,7 @@ export default function SettingsFeed({
                 className={avatarProgress > 0 ? "blur-md" : ""}
                 src={avatarUrl}
               />
-              {avatarUrl && !isPending && (
+              {avatarUrl && !disabledForm && (
                 <div className="size-8 absolute right-4 top-4">
                   <ActionIcon icon={LucideImageMinus} onClick={clearAvatar} />
                 </div>
@@ -274,7 +312,7 @@ export default function SettingsFeed({
               <ActionButton
                 type="button"
                 onClick={openAvatarModal}
-                disabled={isPending}
+                disabled={disabledForm}
               >
                 Upload
               </ActionButton>
@@ -292,7 +330,7 @@ export default function SettingsFeed({
                     className={bannerProgress > 0 ? "blur-md" : ""}
                     src={bannerUrl}
                   />
-                  {!isPending && (
+                  {!disabledForm && (
                     <div className="size-8 absolute right-4 top-4">
                       <ActionIcon
                         icon={LucideImageMinus}
@@ -307,7 +345,7 @@ export default function SettingsFeed({
               <ActionButton
                 type="button"
                 onClick={openBannerModal}
-                disabled={isPending}
+                disabled={disabledForm}
               >
                 Upload
               </ActionButton>
@@ -318,7 +356,7 @@ export default function SettingsFeed({
           <div className="flex w-full max-w-96 m-auto justify-between">
             <ActionButton
               type="reset"
-              disabled={isPending}
+              disabled={disabledForm}
               className="mr-2 mb-2"
               version={BUTTON_VERSIONS.discard}
             >
@@ -326,7 +364,7 @@ export default function SettingsFeed({
             </ActionButton>
             <ActionButton
               type="submit"
-              disabled={isPending}
+              disabled={disabledForm}
               version={BUTTON_VERSIONS.green}
               className="mr-2 mb-2"
             >
