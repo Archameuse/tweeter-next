@@ -9,11 +9,13 @@
   --secondaryGray: #4f4f4f;
   --tertiaryGray: #f2f2f2;
   --primaryBlack: #333333;
+  --skeletonColor: var(--color-gray-200);
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
   --background: #121212;
+  --skeletonColor: var(--color-gray-700);
   color-scheme: dark;
 }
 
@@ -28,6 +30,7 @@
   --color-primaryGray: var(--primaryGray);
   --color-secondaryGray: var(--secondaryGray);
   --color-tertiaryGray: var(--tertiaryGray);
+  --color-skeletonColor: var(--skeletonColor);
   --font-poppins: var(--font-poppins), "sans-serif";
   --font-noto-sans: var(--font-noto-sans), "sans-serif";
 }

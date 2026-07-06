@@ -1,10 +1,14 @@
 "use client";
 
 import PostMain from "@/components/post/postMain";
+import PostSkeleton from "@/components/post/postSkeleton";
 import { PageContainer } from "@/components/ui/pageContainer";
 import { SectionFragment } from "@/components/ui/sectionFragment";
+import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios, { AxiosError } from "axios";
+import { API_URL } from "@/utils/userHelpers";
 
 export enum STATUS {
   top = "Top",
@@ -13,102 +17,38 @@ export enum STATUS {
 }
 export default function ExploreFeed() {
   const [status, setStatus] = useState<STATUS>(STATUS.top);
+  const [search, setSearch] = useState<string>("");
   const searchEvent = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
   };
-  const loading = false;
-  const mockTweets: Tweet[] = [
+  const { data, isError, error, isRefetching, isPending, isSuccess } = useQuery(
     {
-      id: 1,
-      content: "Building the future with Next.js and Tailwind CSS! 🚀",
-      user: {
-        id: 101,
-        username: "tech_coder",
-        image: "/temp/ (19).jpg",
-        followed: true,
+      queryKey: ["exploreTweets"],
+      queryFn: async () => {
+        const res = await axios.get<Tweet[]>(`${API_URL}/tweets/explore`, {
+          withCredentials: true,
+          params: {
+            page: 1,
+            limit: 10,
+            scope: status.toLowerCase(),
+            search,
+          },
+        });
+        return res.data;
       },
-      date: new Date("2026-06-23T10:00:00Z"),
-      likes: 42,
-      replies: 5,
-      retweets: 12,
-      hashtag: "#webdev",
-      image: "/temp/ (10).mp4",
-      liked: true,
-      saved: false,
-      retweeted: false,
     },
-    {
-      id: 2,
-      content:
-        "Caught an incredible sunrise over the mountains this morning. Absolute perfection.",
-      user: {
-        id: 102,
-        username: "nature_wanderer",
-        image: "/temp/ (11).jpg",
-      },
-      date: new Date("2026-06-23T08:15:00Z"),
-      likes: 128,
-      replies: 24,
-      retweets: 35,
-      image: "/temp/ (13).jpg",
-      liked: false,
-      saved: true,
-      retweeted: true,
-    },
-    {
-      id: 3,
-      content: "This is a private update exclusively for the inner circle.",
-      user: {
-        id: 103,
-        username: "secret_agent",
-        followed: false,
-      },
-      date: new Date("2026-06-22T22:30:00Z"),
-      likes: 12,
-      replies: 2,
-      retweets: 1,
-      onlyFollowers: true,
-      liked: false,
-      saved: false,
-      retweeted: false,
-    },
-    {
-      id: 4,
-      content:
-        "Check out this incredible open source tool I stumbled upon today!",
-      user: {
-        id: 104,
-        username: "dev_share",
-        image: "/temp/ (1).jpg",
-        followed: true,
-      },
-      date: new Date("2026-06-23T14:45:00Z"),
-      likes: 85,
-      replies: 8,
-      retweets: 19,
-      retweetedBy: "tech_coder",
-      hashtag: "#opensource",
-      liked: true,
-      saved: true,
-      retweeted: true,
-    },
-    {
-      id: 5,
-      content: "Coffee secured. Code mode activated. Let's get to work.",
-      user: {
-        id: 105,
-        username: "coffee_bytes",
-      },
-      date: new Date("2026-06-24T06:00:00Z"),
-      likes: 310,
-      replies: 45,
-      retweets: 88,
-      image: "/temp/ (21).jpg",
-      liked: false,
-      saved: false,
-      retweeted: false,
-    },
-  ];
+  );
+  useEffect(() => {
+    if (isError) {
+      if (error instanceof AxiosError) {
+        const errorMessage = error.response?.data?.message;
+        alert(errorMessage || error.message);
+      } else {
+        alert("Unknown error");
+      }
+    }
+  });
+
   return (
     <PageContainer>
       <div>
@@ -163,7 +103,7 @@ export default function ExploreFeed() {
         <div
           className={`
             flex flex-col gap-10 max-w-xl m-auto w-full lg:max-w-fit
-          ${loading && "blur-md cursor-wait **:pointer-events-none"}
+          ${isRefetching && "blur-md cursor-wait **:pointer-events-none"}
         `}
         >
           {/* <ProfilePost
@@ -171,9 +111,15 @@ export default function ExploreFeed() {
           @refresh-reply="refresh"
           :post="tweet"
         /> */}
-          {mockTweets.map((tweet) => (
+          {/* {mockTweets.map((tweet) => (
             <PostMain tweet={tweet} key={tweet.id} />
-          ))}
+          ))} */}
+          {/* {mockTweets.map((tweet) => (
+            <PostMain tweet={tweet} key={tweet.id} />
+          ))} */}
+          {isSuccess && data
+            ? data.map((tweet) => <PostMain tweet={tweet} key={tweet.id} />)
+            : [1, 2, 3].map((key) => <PostSkeleton key={`skeleton-${key}`} />)}
         </div>
       </div>
     </PageContainer>

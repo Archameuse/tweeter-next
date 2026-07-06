@@ -10,7 +10,7 @@ export function UserAvatar({
   const avatar = src || "/noprofile.svg";
 
   return (
-    <div className="h-full aspect-square rounded-md border border-black dark:border-white overflow-hidden relative">
+    <div className="h-full aspect-square rounded-md border border-skeletonColor overflow-hidden relative">
       <Image
         src={avatar}
         alt="User avatar"

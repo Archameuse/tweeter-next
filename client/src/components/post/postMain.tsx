@@ -12,12 +12,14 @@ import PostImage from "./postImage";
 import { useMemo } from "react";
 import symbolFormatter from "@/utils/symbolFormatter";
 import PostAction, { POST_TYPE } from "./postAction";
+import { useUser } from "@/providers/UserProvider";
 
 export default function PostMain({ tweet }: { tweet: Tweet }) {
+  const { user } = useUser();
   const date = useMemo(() => {
-    if (!tweet.date) return undefined;
+    if (!tweet.created_at) return undefined;
     const now = new Date();
-    const date = new Date(tweet.date);
+    const date = new Date(tweet.created_at);
     const getTime = () => {
       const hours = date.getHours();
       const minutes = date.getMinutes();
@@ -45,14 +47,18 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
     if (now.getDate() === date.getDate() && now.getMonth() === date.getMonth())
       return `Today, at ${getTime()}`;
     return `${date.getDate()} ${monthName(date.getMonth())} at ${getTime()}`;
-  }, [tweet.date]);
+  }, [tweet.created_at]);
 
   const hashtag = useMemo(
     () => tweet.hashtag?.replace(/^#+/, "") || "",
     [tweet.hashtag],
   );
 
-  const canReply = useMemo(() => true, []);
+  //NEED TO ADD GET FROM DATABASE ON TWEET AM I CURRENTLY LOGGED IN USER A FOLLOWED ONE OF AUTHOR
+  const canReply = useMemo(
+    () => user && (!tweet.onlyFollowers || false),
+    [user, tweet.onlyFollowers],
+  );
 
   const retweetLoading = false;
   const likeLoading = false;
@@ -70,27 +76,28 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
         </div>
       )}
       <div className="w-full p-5 bg-white dark:bg-primaryBlack shadow-md rounded-md flex flex-col gap-5">
-        {tweet.reply?.id && (
+        {tweet.replyTo?.id && (
           <div>
             Reply to
-            <Link href={`/user/${tweet.reply.id}`}>@{tweet.reply.name}</Link>
+            <Link href={`/user/${tweet.replyTo.id}`}>
+              @{tweet.replyTo.username}
+            </Link>
           </div>
         )}
-        {tweet.user && (
-          <Link href={"/user/" + tweet.user.id}>
-            <div className="flex h-10 gap-4">
-              <UserAvatar src={tweet.user.image} size={80} />
-              <div className="flex flex-col justify-between">
-                <span className="text-base dark:text-white">
-                  {tweet.user.username}
-                </span>
-                <span className="text-xs text-primaryGray dark:text-tertiaryGray">
-                  {date}
-                </span>
-              </div>
+
+        <Link href={"/user/" + tweet.author.id}>
+          <div className="flex h-10 gap-4">
+            <UserAvatar src={tweet.author.avatar} size={80} />
+            <div className="flex flex-col justify-between">
+              <span className="text-base dark:text-white">
+                {tweet.author.username}
+              </span>
+              <span className="text-xs text-primaryGray dark:text-tertiaryGray">
+                {date}
+              </span>
             </div>
-          </Link>
-        )}
+          </div>
+        </Link>
         <div className="font-noto-sans text-secondaryGray dark:text-white">
           <p>{tweet.content}</p>
           {tweet.hashtag && <p className="mt-4 opacity-60">{"#" + hashtag}</p>}
@@ -105,7 +112,7 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
           <li>{symbolFormatter(tweet.retweets, 1)} Retweets</li>
           <li>{symbolFormatter(tweet.likes, 1)} Likes</li>
         </ul>
-        <div className="p-4 flex gap-4 items-center border-y border-tertiaryGray">
+        <div className="p-4 flex gap-4 items-center border-y border-skeletonColor">
           <PostAction icon={MessageSquare}>
             <span className="hidden sm:block">Comments</span>
           </PostAction>
@@ -137,7 +144,7 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
         {canReply && (
           <div className="min-h-10 h-fit flex gap-4">
             <div className="h-10">
-              <UserAvatar size={64} src="/temp/ (25).jpg" />
+              <UserAvatar size={64} src={user?.avatar} />
             </div>
             <div className="grow cursor-pointer min-h-full overflow-y-auto max-h-96 px-3 py-2 text-sm font-noto-sans bg-tertiaryGray dark:bg-secondaryGray rounded-xl">
               <div className="h-6 z-10 aspect-square float-right cursor-pointer">
