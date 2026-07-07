@@ -4,11 +4,12 @@ import PostMain from "@/components/post/postMain";
 import PostSkeleton from "@/components/post/postSkeleton";
 import { PageContainer } from "@/components/ui/pageContainer";
 import { SectionFragment } from "@/components/ui/sectionFragment";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import axios, { AxiosError } from "axios";
 import { API_URL } from "@/utils/userHelpers";
+import { ActionButton } from "@/components/ui/actionButton";
 
 export enum STATUS {
   top = "Top",
@@ -18,26 +19,50 @@ export enum STATUS {
 export default function ExploreFeed() {
   const [status, setStatus] = useState<STATUS>(STATUS.top);
   const [search, setSearch] = useState<string>("");
+  const [page, setPage] = useState<number>(1);
   const searchEvent = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const searchData = formData.get("search") || "";
+    if (typeof searchData === "string") {
+      setSearch(searchData);
+      setPage(1);
+    }
+    // setSearch()
   };
-  const { data, isError, error, isRefetching, isPending, isSuccess } = useQuery(
-    {
-      queryKey: ["exploreTweets"],
-      queryFn: async () => {
-        const res = await axios.get<Tweet[]>(`${API_URL}/tweets/explore`, {
+  const {
+    data,
+    isError,
+    error,
+    isRefetching,
+    isPending,
+    isFetching,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["exploreTweets", status, search],
+    queryFn: async ({ pageParam }) => {
+      const res = await axios.get<PaginationResponse<Tweet[]>>(
+        `${API_URL}/tweets/explore`,
+        {
           withCredentials: true,
           params: {
-            page: 1,
-            limit: 10,
+            page: pageParam,
+            limit: 3,
             scope: status.toLowerCase(),
-            search,
+            q: search,
           },
-        });
-        return res.data;
-      },
+        },
+      );
+      // console.log(res.data);
+      return res.data;
     },
-  );
+    getNextPageParam: (lastPage) =>
+      lastPage.hasNextPage ? lastPage.page + 1 : undefined,
+    initialPageParam: 1,
+    // placeholderData: (prev) => prev,
+    // staleTime: 10 * 60 * 1000,
+  });
   useEffect(() => {
     if (isError) {
       if (error instanceof AxiosError) {
@@ -47,26 +72,31 @@ export default function ExploreFeed() {
         alert("Unknown error");
       }
     }
-  });
+  }, [isError, error]);
+
+  const handleStatus = (status: STATUS) => {
+    setStatus(status);
+    setPage(1);
+  };
 
   return (
     <PageContainer>
       <div>
         <aside className="sticky top-4 py-5 w-full lg:w-80 shrink-0 flex flex-col gap-4 bg-white dark:bg-secondaryGray shadow-md dark:shadow-primaryBlack rounded-lg h-fit">
           <SectionFragment
-            onClick={() => setStatus(STATUS.top)}
+            onClick={() => handleStatus(STATUS.top)}
             active={status === STATUS.top}
           >
             {STATUS.top}
           </SectionFragment>
           <SectionFragment
-            onClick={() => setStatus(STATUS.latest)}
+            onClick={() => handleStatus(STATUS.latest)}
             active={status === STATUS.latest}
           >
             {STATUS.latest}
           </SectionFragment>
           <SectionFragment
-            onClick={() => setStatus(STATUS.media)}
+            onClick={() => handleStatus(STATUS.media)}
             active={status === STATUS.media}
           >
             {STATUS.media}
@@ -87,10 +117,10 @@ export default function ExploreFeed() {
             </div>
             <input
               type="search"
+              name="search"
               id="tweet-search"
               className="block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               placeholder="Search..."
-              v-model="search"
             />
             <button
               type="submit"
@@ -117,9 +147,18 @@ export default function ExploreFeed() {
           {/* {mockTweets.map((tweet) => (
             <PostMain tweet={tweet} key={tweet.id} />
           ))} */}
-          {isSuccess && data
-            ? data.map((tweet) => <PostMain tweet={tweet} key={tweet.id} />)
+          {!isPending && data?.pages
+            ? data.pages.flatMap((page) =>
+                page.data.map((tweet) => (
+                  <PostMain tweet={tweet} key={tweet.id} />
+                )),
+              )
             : [1, 2, 3].map((key) => <PostSkeleton key={`skeleton-${key}`} />)}
+          {data && hasNextPage && (
+            <ActionButton disabled={isFetching} onClick={() => fetchNextPage()}>
+              Load more
+            </ActionButton>
+          )}
         </div>
       </div>
     </PageContainer>

@@ -20,6 +20,7 @@ import {
   authMiddleware,
   optionalAuthMiddleware,
 } from "@/middleware/auth.middleware.js";
+import { paginate } from "@/utils/drizzleHandlers.js";
 
 const app = new Hono();
 
@@ -47,58 +48,52 @@ app.get("/follows", optionalAuthMiddleware, async (c) => {
   if (!id) throw new MissingIdError();
   const authId = c.get("userId");
   const processedTargetId = idNumberSchema.parse(id);
-  const processedPage = z.coerce.number().int().min(1).catch(1).parse(page);
-  const processedLimit = z.coerce
-    .number()
-    .int()
-    .positive()
-    .min(MIN_PAGE_LIMIT)
-    .max(MAX_PAGE_LIMIT)
-    .catch(DEFAULT_PAGE_LIMIT)
-    .parse(limit);
+
   const processedScope = z
     .enum(FOLLOW_SCOPE)
     .catch(FOLLOW_SCOPE.followers)
     .parse(scope);
 
-  const data = await db
-    .select({
-      user_id: users.user_id,
-      username: users.username,
-      avatar: users.avatar,
-      banner: users.banner,
-      status: users.status,
-      followers_count:
-        sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id})`.as(
-          "followers_count",
-        ),
-      following_count:
-        sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.follower_id} = ${users.user_id})`.as(
-          "following_count",
-        ),
-      ...(authId &&
-        authId !== processedTargetId && {
-          is_followed:
-            sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id} AND ${follows.follower_id} = ${authId})`.as(
-              "is_followed",
-            ),
-        }),
-    })
-    .from(users)
-    .innerJoin(
-      follows,
-      processedScope === FOLLOW_SCOPE.followers
-        ? eq(follows.follower_id, users.user_id)
-        : eq(follows.followed_id, users.user_id),
-    )
-    .where(
-      processedScope === FOLLOW_SCOPE.followers
-        ? eq(follows.followed_id, processedTargetId)
-        : eq(follows.follower_id, processedTargetId),
-    )
-    .orderBy(desc(follows.created_at))
-    .limit(processedLimit)
-    .offset((processedPage - 1) * processedLimit);
+  const data = await paginate(
+    db
+      .select({
+        user_id: users.user_id,
+        username: users.username,
+        avatar: users.avatar,
+        banner: users.banner,
+        status: users.status,
+        followers_count:
+          sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id})`.as(
+            "followers_count",
+          ),
+        following_count:
+          sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.follower_id} = ${users.user_id})`.as(
+            "following_count",
+          ),
+        ...(authId &&
+          authId !== processedTargetId && {
+            is_followed:
+              sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id} AND ${follows.follower_id} = ${authId})`.as(
+                "is_followed",
+              ),
+          }),
+      })
+      .from(users)
+      .innerJoin(
+        follows,
+        processedScope === FOLLOW_SCOPE.followers
+          ? eq(follows.follower_id, users.user_id)
+          : eq(follows.followed_id, users.user_id),
+      )
+      .where(
+        processedScope === FOLLOW_SCOPE.followers
+          ? eq(follows.followed_id, processedTargetId)
+          : eq(follows.follower_id, processedTargetId),
+      )
+      .orderBy(desc(follows.created_at))
+      .$dynamic(),
+    { page, perPage: limit },
+  );
   return c.json(dbProfileToGlobalProfileSchema.array().parse(data));
 });
 

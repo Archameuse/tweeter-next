@@ -29,7 +29,7 @@ export function ActionButton({
                 ? "text-red-700 hover:text-white border border-red-700 hover:bg-red-800 active active:bg-red-700 px-5 py-2.5 text-sm"
                 : ""
         } 
-        font-noto-sans rounded-md cursor-pointer select-none disabled:opacity-60 disabled:pointer-events-none active:scale-95 transition-all`}
+        font-noto-sans rounded-md cursor-pointer select-none disabled:opacity-60 disabled:pointer-events-none active:opacity-80 transition-all`}
     >
       {children}
     </button>

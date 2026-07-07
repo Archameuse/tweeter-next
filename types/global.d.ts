@@ -33,6 +33,7 @@ declare global {
     saved?: boolean;
     retweeted?: boolean;
     replyTo?: { id: string; username: string } | null; // id - tweet
+    replyAllowed?: boolean; //reply allowed if AUTHOR of the tweet follows currently logged in user
   }
 
   interface TweetInput extends Pick<
@@ -67,5 +68,14 @@ declare global {
     hashtag: string; // trend name with automatic #
     //tweets: Tweet[]; // idk tweets under this hashtag
     tweets: number; // amount of tweets under this hashtag
+  }
+
+  interface PaginationResponse<T> {
+    data: Awaited<T>;
+    total: number;
+    page: number;
+    perPage: number;
+    totalPages: number;
+    hasNextPage: boolean;
   }
 }

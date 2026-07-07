@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-query-devtools": "^5.101.2",
     "@teispace/next-themes": "^2.0.3",
     "axios": "^1.18.1",
     "lucide-react": "^1.21.0",

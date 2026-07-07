@@ -2,6 +2,8 @@
 import { ThemeProvider } from "@teispace/next-themes";
 import { UserProvider } from "@/providers/UserProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 export function Providers({
   children,
@@ -11,10 +13,22 @@ export function Providers({
   initialUser: User | null;
 }) {
   const queryClient = new QueryClient();
+  // hide "play" errors since they are literally serve no purpose
+  useEffect(() => {
+    const rejectionHandler = (e: PromiseRejectionEvent) => {
+      console.log(e.reason);
+      if (e.reason?.name === "AbortError") e.preventDefault();
+    };
+    window.addEventListener("unhandledrejection", rejectionHandler);
+    return () => {
+      window.removeEventListener("unhandledrejection", rejectionHandler);
+    };
+  });
   return (
     <ThemeProvider>
       <UserProvider initialUser={initialUser}>
         <QueryClientProvider client={queryClient}>
+          <ReactQueryDevtools initialIsOpen={false} />
           {children}
         </QueryClientProvider>
       </UserProvider>

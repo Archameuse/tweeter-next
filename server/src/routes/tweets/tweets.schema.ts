@@ -8,11 +8,8 @@ import {
   looseUsernameSchema,
   optionalBooleanSchema,
 } from "@/schema.js";
+import { paginationQuerySchema } from "@/utils/drizzleHandlers.js";
 import z from "zod";
-
-const DEFAULT_PAGE_LIMIT = 10;
-const MAX_PAGE_LIMIT = 25;
-const MIN_PAGE_LIMIT = 1;
 
 export enum FILTER {
   all = "all",
@@ -84,6 +81,7 @@ export const dbTweetSchema = z.object({
   is_liked: optionalBooleanSchema,
   is_saved: optionalBooleanSchema,
   is_retweeted: optionalBooleanSchema,
+  reply_allowed: optionalBooleanSchema,
 });
 
 /**
@@ -151,21 +149,14 @@ export const dbTweetToGlobalTweetSchema = dbTweetSchema.transform(
         }
       : null,
     retweetedBy: db.retweeted_by,
+    replyAllowed: db.reply_allowed,
   }),
 );
 
-export const paginationQuerySchema = z.object({
-  page: z.coerce.number().int().positive().min(1).catch(1),
-  perPage: z.coerce
-    .number()
-    .int()
-    .positive()
-    .min(MIN_PAGE_LIMIT)
-    .max(MAX_PAGE_LIMIT)
-    .catch(DEFAULT_PAGE_LIMIT),
-  // orderBy: z.enum(ORDER).catch(ORDER.new),
+export const tweetPaginationQuerySchema = paginationQuerySchema.extend({
   orderBy: z.preprocess((val) => val, z.enum(ORDER)).catch(ORDER.new),
 });
+
 export const filterQuerySchema = z.object({
   //   filter: z.preprocess((val) => val, z.enum(FILTER)).catch(FILTER.all),
   activeFilters: z
@@ -201,7 +192,7 @@ export const tweetExistsAndActionQuerySchema = z.object({
 });
 
 export type DbTweetType = z.infer<typeof dbTweetSchema>;
-export type PaginationInput = z.input<typeof paginationQuerySchema>;
+export type TweetPaginationInput = z.input<typeof tweetPaginationQuerySchema>;
 export type FilterInput = z.input<typeof filterQuerySchema>;
 export type TweetExistsAndActionInput = z.input<
   typeof tweetExistsAndActionQuerySchema

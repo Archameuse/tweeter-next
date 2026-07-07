@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { authMiddleware } from "@/middleware/auth.middleware.js";
+import { optionalAuthMiddleware } from "@/middleware/auth.middleware.js";
 import { dbUserToGlobalUserSchema, idNumberSchema } from "@/schema.js";
 import { deleteSession } from "@/utils/sessionsHandlers.js";
 import { User404Error } from "@/utils/standardErrors.js";
@@ -7,8 +7,9 @@ import { Hono } from "hono";
 
 const app = new Hono();
 
-app.get("/me", authMiddleware, async (c) => {
+app.get("/me", optionalAuthMiddleware, async (c) => {
   const userId = c.get("userId");
+  if (!userId) return c.json(null, 200);
   const user = await db.query.users.findFirst({
     columns: { username: true, avatar: true, user_id: true },
     where: { user_id: userId },

@@ -31,8 +31,8 @@ import {
   FilterInput,
   filterQuerySchema,
   ORDER,
-  PaginationInput,
-  paginationQuerySchema,
+  TweetPaginationInput,
+  tweetPaginationQuerySchema,
 } from "./tweets.schema.js";
 import { idNumberSchema, idSchema } from "@/schema.js";
 import { MissingIdError } from "@/utils/standardErrors.js";
@@ -40,6 +40,7 @@ import {
   authMiddleware,
   optionalAuthMiddleware,
 } from "@/middleware/auth.middleware.js";
+import { paginate } from "@/utils/drizzleHandlers.js";
 
 const app = new Hono();
 
@@ -122,6 +123,10 @@ const buildTweetQuery = (
             LIMIT 1
           )`.as("hashtag"),
     retweeted_by: sql<string | null>`NULL`.as("retweeted_by"),
+    reply_allowed: (userId
+      ? sql<boolean>`NOT ${tweets.only_followers} OR ${tweets.user_id} = ${userId} OR EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${userId} AND ${follows.follower_id} = ${tweets.user_id})`
+      : sql<boolean>`FALSE`
+    ).as("reply_allowed"),
     created_at: sql<Date>`${tweets.created_at}`.as("created_at"),
   };
   if (fetchRetweets)
@@ -151,20 +156,20 @@ const buildTweetQuery = (
 
 /** should be used only with buildTweetQuery */
 const pagination = <T extends SQLiteSelect>(
-  db: T,
-  query: Partial<PaginationInput> = {},
+  selection: T,
+  query: Partial<TweetPaginationInput> = {},
 ) => {
-  const { page, perPage, orderBy } = paginationQuerySchema.parse(query);
-  return db
-    .orderBy(
+  const { page, perPage, orderBy } = tweetPaginationQuerySchema.parse(query);
+  return paginate(
+    selection.orderBy(
       orderBy === ORDER.top
         ? desc(sql`likes_count`)
         : orderBy === ORDER.old
           ? asc(tweets.created_at)
           : desc(tweets.created_at),
-    )
-    .limit(perPage)
-    .offset((page - 1) * perPage);
+    ),
+    { page, perPage },
+  );
 };
 
 /** should be used only with buildTweetQuery */
@@ -234,41 +239,37 @@ const filters = <T extends SQLiteSelect>(
 app.get("/bookmarks", authMiddleware, async (c) => {
   const { page, scope, limit } = c.req.query();
   const userId = c.get("userId");
-  const data: Tweet[] = dbTweetToGlobalTweetSchema
-    .array()
-    .parse(
-      await pagination(
-        filters(
-          buildTweetQuery(userId).innerJoin(
-            saves,
-            and(eq(tweets.tweet_id, saves.tweet_id), eq(saves.user_id, userId)),
-          ),
-          { activeFilters: new Set([scope]) },
-        ),
-        { page, perPage: limit, orderBy: scope },
+  const { data: rawData, ...metadata } = await pagination(
+    filters(
+      buildTweetQuery(userId).innerJoin(
+        saves,
+        and(eq(tweets.tweet_id, saves.tweet_id), eq(saves.user_id, userId)),
       ),
-    );
-  return c.json(data);
+      { activeFilters: new Set([scope]) },
+    ),
+    { page, perPage: limit, orderBy: scope },
+  );
+  const data: Tweet[] = dbTweetToGlobalTweetSchema.array().parse(rawData);
+  return c.json({ data, ...metadata });
 });
 
 // all w/o retweets on /explore (replies shown as normal tweets but with some marking that they are replies in fact) + filters+search
 app.get("/explore", optionalAuthMiddleware, async (c) => {
   const { page, scope, limit, q } = c.req.query();
   const userId = c.get("userId");
-  const data = dbTweetToGlobalTweetSchema.array().parse(
-    await pagination(
-      filters(buildTweetQuery(userId), {
-        activeFilters: new Set([scope]),
-        search: q,
-      }),
-      {
-        page,
-        perPage: limit,
-        orderBy: scope,
-      },
-    ),
+  const { data: rawData, ...metadata } = await pagination(
+    filters(buildTweetQuery(userId), {
+      activeFilters: new Set([scope]),
+      search: q,
+    }),
+    {
+      page,
+      perPage: limit,
+      orderBy: scope,
+    },
   );
-  return c.json(data);
+  const data = dbTweetToGlobalTweetSchema.array().parse(rawData);
+  return c.json({ data, ...metadata });
 });
 
 // profile on /user/:id and / users tweets+retweets + filters
@@ -305,28 +306,27 @@ app.get("/user", optionalAuthMiddleware, async (c) => {
     FILTER.profileTweetsFollowed,
     processedScope,
   ]);
-  const data = dbTweetToGlobalTweetSchema.array().parse(
-    await pagination(
-      activeFilters.has(FILTER.profileReplies)
-        ? filters(buildTweetQuery(userId, false), {
+  const { data: rawData, ...metadata } = await pagination(
+    activeFilters.has(FILTER.profileReplies)
+      ? filters(buildTweetQuery(userId, false), {
+          profileId: processedId,
+          activeFilters,
+        })
+      : union(
+          filters(buildTweetQuery(userId, false), {
             profileId: processedId,
             activeFilters,
-          })
-        : union(
-            filters(buildTweetQuery(userId, false), {
-              profileId: processedId,
-              activeFilters,
-            }),
-            filters(buildTweetQuery(userId, true), {
-              profileId: processedId,
-              activeFilters,
-              isRetweet: true,
-            }),
-          ).$dynamic(),
-      { page, perPage: limit },
-    ),
+          }),
+          filters(buildTweetQuery(userId, true), {
+            profileId: processedId,
+            activeFilters,
+            isRetweet: true,
+          }),
+        ).$dynamic(),
+    { page, perPage: limit },
   );
-  return c.json(data);
+  const data = dbTweetToGlobalTweetSchema.array().parse(rawData);
+  return c.json({ data, ...metadata });
 });
 
 // replies /replies/:id list of tweets that are replying to this specific id open through modal
@@ -335,16 +335,15 @@ app.get("/replies", optionalAuthMiddleware, async (c) => {
   if (!id) throw new MissingIdError();
   const processedId = idSchema.parse(id);
   const userId = c.get("userId");
-  const data = dbTweetToGlobalTweetSchema.array().parse(
-    await pagination(
-      filters(buildTweetQuery(userId), {
-        tweetId: processedId,
-        activeFilters: new Set([FILTER.tweetReplies]),
-      }),
-      { page, perPage: limit },
-    ),
+  const { data: rawData, ...metadata } = await pagination(
+    filters(buildTweetQuery(userId), {
+      tweetId: processedId,
+      activeFilters: new Set([FILTER.tweetReplies]),
+    }),
+    { page, perPage: limit },
   );
-  return c.json(data);
+  const data = dbTweetToGlobalTweetSchema.array().parse(rawData);
+  return c.json({ data, ...metadata });
 });
 
 // trends /trends top5 hashtags with most tweets for now, maybe later will add some logic

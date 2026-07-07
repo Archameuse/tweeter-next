@@ -56,8 +56,8 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
 
   //NEED TO ADD GET FROM DATABASE ON TWEET AM I CURRENTLY LOGGED IN USER A FOLLOWED ONE OF AUTHOR
   const canReply = useMemo(
-    () => user && (!tweet.onlyFollowers || false),
-    [user, tweet.onlyFollowers],
+    () => user && (!tweet.onlyFollowers || tweet.replyAllowed),
+    [user, tweet.onlyFollowers, tweet.replyAllowed],
   );
 
   const retweetLoading = false;
