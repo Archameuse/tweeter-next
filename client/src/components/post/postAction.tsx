@@ -1,16 +1,18 @@
 import { Loader2, LucideIcon } from "lucide-react";
 import { useMemo } from "react";
 
-export enum POST_TYPE {
-  retweet,
-  like,
-  save,
+/**
+ * SHOULD MATCH API ENDPOINTS
+ */
+export enum POST_ACTION {
+  retweet = "retweets",
+  like = "likes",
+  save = "saves",
 }
 
-interface PostActionProps extends React.ComponentPropsWithoutRef<"div"> {
+interface PostActionProps extends React.ComponentPropsWithoutRef<"button"> {
   icon: LucideIcon;
-  type?: POST_TYPE;
-  children: React.ReactNode;
+  action?: POST_ACTION;
   loading?: boolean;
   left?: boolean;
   active?: boolean;
@@ -19,36 +21,43 @@ interface PostActionProps extends React.ComponentPropsWithoutRef<"div"> {
 }
 
 export default function PostAction({
-  loading,
-  type,
+  action,
   left,
   active,
   reverse,
   icon: Icon,
-  children,
   className,
   ...props
 }: PostActionProps) {
   const activeClass = useMemo(() => {
-    switch (type) {
-      case POST_TYPE.like:
+    switch (action) {
+      case POST_ACTION.like:
         return "text-[#EB5757]";
-      case POST_TYPE.retweet:
+      case POST_ACTION.retweet:
         return "text-[#27AE60]";
-      case POST_TYPE.save:
+      case POST_ACTION.save:
         return "text-primaryBlue";
       default:
         return "text-secondaryGray";
     }
-  }, [type]);
+  }, [action]);
 
   return (
-    <div
+    <button
       {...props}
-      className={`flex gap-3 font-noto-sans text-sm py-3 px-2 items-center rounded-lg grow cursor-pointer select-none hover:bg-tertiaryGray active:bg-[#dadada] dark:hover:bg-primaryGray dark:active:bg-secondaryGray ${loading ? "cursor-not-allowed opacity-80 active:bg-transparent hover:bg-transparent dark:hover:bg-transparent dark:active:bg-transparent" : ""} ${left ? "justify-start" : "justify-center"} ${active && !loading ? activeClass : "text-secondaryGray dark:text-tertiaryGray"} ${className ? className : ""}`}
+      className={`
+        flex gap-3 font-noto-sans text-sm py-3 px-2 items-center rounded-lg grow cursor-pointer select-none hover:bg-tertiaryGray active:bg-[#dadada] dark:hover:bg-primaryGray dark:active:bg-secondaryGray 
+        disabled:pointer-events-none disabled:opacity-40 
+        ${left ? "justify-start" : "justify-center"} 
+        ${active ? activeClass : ""} 
+        ${className ? className : ""}
+        `}
     >
-      {!loading && <Icon className={reverse ? "-scale-x-100" : ""} />}
-      {!loading ? children : <Loader2 className="animate-spin" />}
-    </div>
+      <Icon className={reverse ? "-scale-x-100" : ""} />
+    </button>
   );
 }
+// }${loading ? "cursor-not-allowed opacity-80 active:bg-transparent hover:bg-transparent dark:hover:bg-transparent dark:active:bg-transparent" : ""}
+// text-secondaryGray dark:text-tertiaryGray
+
+// {!loading ? children : <Loader2 className="animate-spin" />}

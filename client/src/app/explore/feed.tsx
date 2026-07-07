@@ -1,6 +1,6 @@
 "use client";
 
-import PostMain from "@/components/post/postMain";
+import PostMain, { TWEET_LIST_KEY } from "@/components/post/postMain";
 import PostSkeleton from "@/components/post/postSkeleton";
 import { PageContainer } from "@/components/ui/pageContainer";
 import { SectionFragment } from "@/components/ui/sectionFragment";
@@ -40,7 +40,7 @@ export default function ExploreFeed() {
     hasNextPage,
     fetchNextPage,
   } = useInfiniteQuery({
-    queryKey: ["exploreTweets", status, search],
+    queryKey: [TWEET_LIST_KEY.explore, status, search],
     queryFn: async ({ pageParam }) => {
       const res = await axios.get<PaginationResponse<Tweet[]>>(
         `${API_URL}/tweets/explore`,
@@ -60,8 +60,8 @@ export default function ExploreFeed() {
     getNextPageParam: (lastPage) =>
       lastPage.hasNextPage ? lastPage.page + 1 : undefined,
     initialPageParam: 1,
-    // placeholderData: (prev) => prev,
-    // staleTime: 10 * 60 * 1000,
+    placeholderData: (prev) => prev,
+    staleTime: 10 * 60 * 1000,
   });
   useEffect(() => {
     if (isError) {
@@ -150,7 +150,11 @@ export default function ExploreFeed() {
           {!isPending && data?.pages
             ? data.pages.flatMap((page) =>
                 page.data.map((tweet) => (
-                  <PostMain tweet={tweet} key={tweet.id} />
+                  <PostMain
+                    tweet={tweet}
+                    key={tweet.id}
+                    listKey={TWEET_LIST_KEY.explore}
+                  />
                 )),
               )
             : [1, 2, 3].map((key) => <PostSkeleton key={`skeleton-${key}`} />)}

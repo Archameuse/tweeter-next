@@ -9,12 +9,32 @@ import {
 import Link from "next/link";
 import { UserAvatar } from "../ui/userAvatar";
 import PostImage from "./postImage";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import symbolFormatter from "@/utils/symbolFormatter";
-import PostAction, { POST_TYPE } from "./postAction";
+import PostAction, { POST_ACTION } from "./postAction";
 import { useUser } from "@/providers/UserProvider";
+import {
+  InfiniteData,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import axios, { AxiosError } from "axios";
+import { API_URL } from "@/utils/userHelpers";
 
-export default function PostMain({ tweet }: { tweet: Tweet }) {
+export enum TWEET_LIST_KEY {
+  explore = "exploreTweets",
+  bookmarks = "bookmarksTweets",
+  replies = "repliesTweets",
+  profile = "profileTweets",
+}
+
+export default function PostMain({
+  tweet,
+  listKey,
+}: {
+  tweet: Tweet;
+  listKey: TWEET_LIST_KEY;
+}) {
   const { user } = useUser();
   const date = useMemo(() => {
     if (!tweet.created_at) return undefined;
@@ -66,6 +86,77 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
   const retweetActive = false;
   const likeActive = false;
   const saveActive = false;
+  const actionState = useCallback(
+    (action: POST_ACTION) => {
+      if (action === POST_ACTION.like) return tweet.liked;
+      if (action === POST_ACTION.retweet) return tweet.retweeted;
+      if (action === POST_ACTION.save) return tweet.saved;
+      return false;
+    },
+    [tweet.liked, tweet.retweeted, tweet.saved],
+  );
+
+  const queryClient = useQueryClient();
+  const { mutate, isPending } = useMutation({
+    mutationFn: async (action: POST_ACTION) =>
+      await axios(`${API_URL}/tweets/${action}/${tweet.id}`, {
+        method: actionState(action) ? "DELETE" : "POST",
+        withCredentials: true,
+      }),
+    onMutate: async (action: POST_ACTION) => {
+      await queryClient.cancelQueries({ queryKey: [listKey], exact: false });
+      const prevData = queryClient.getQueryData<
+        InfiniteData<PaginationResponse<Tweet[]>>
+      >([listKey]);
+      queryClient.setQueriesData<InfiniteData<PaginationResponse<Tweet[]>>>(
+        { queryKey: [listKey], exact: false },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              data: page.data.map((t) =>
+                t.id === tweet.id
+                  ? {
+                      ...t,
+                      ...(action === POST_ACTION.like && {
+                        likes: t.liked ? t.likes - 1 : t.likes + 1,
+                        liked: !t.liked,
+                      }),
+                      ...(action === POST_ACTION.retweet && {
+                        retweets: t.retweeted ? t.retweets - 1 : t.retweets + 1,
+                        retweeted: !t.retweeted,
+                      }),
+                      ...(action === POST_ACTION.save && {
+                        saves: t.saved ? t.saves - 1 : t.saves + 1,
+                        saved: !t.saved,
+                      }),
+                    }
+                  : t,
+              ),
+            })),
+          };
+        },
+      );
+      return { prevData };
+    },
+    onError: (err, _variables, context) => {
+      if (context?.prevData) {
+        queryClient.setQueriesData(
+          { queryKey: [listKey], exact: false },
+          context.prevData,
+        );
+      }
+      if (err instanceof AxiosError) {
+        if (err.response?.data?.message) {
+          console.error(err);
+          return alert(err.response?.data?.message);
+        }
+      }
+      return alert("Unknown error");
+    },
+  });
 
   return (
     <div className="w-full select-none">
@@ -118,25 +209,28 @@ export default function PostMain({ tweet }: { tweet: Tweet }) {
           </PostAction>
           <PostAction
             icon={Repeat2}
-            loading={retweetLoading}
-            active={retweetActive}
-            type={POST_TYPE.retweet}
+            active={tweet.retweeted}
+            action={POST_ACTION.retweet}
+            disabled={isPending}
+            onClick={() => mutate(POST_ACTION.retweet)}
           >
             <span className="hidden sm:block">Retweet</span>
           </PostAction>
           <PostAction
             icon={Heart}
-            loading={likeLoading}
-            active={likeActive}
-            type={POST_TYPE.like}
+            active={tweet.liked}
+            action={POST_ACTION.like}
+            disabled={isPending}
+            onClick={() => mutate(POST_ACTION.like)}
           >
             <span className="hidden sm:block">Like</span>
           </PostAction>
           <PostAction
             icon={Bookmark}
-            loading={saveLoading}
-            active={saveActive}
-            type={POST_TYPE.save}
+            active={tweet.saved}
+            action={POST_ACTION.save}
+            disabled={isPending}
+            onClick={() => mutate(POST_ACTION.save)}
           >
             <span className="hidden sm:block">Save</span>
           </PostAction>
