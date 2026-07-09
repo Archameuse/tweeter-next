@@ -153,14 +153,24 @@ export const dbTweetToGlobalTweetSchema = dbTweetSchema.transform(
   }),
 );
 
-export const tweetPaginationQuerySchema = paginationQuerySchema.extend({
-  orderBy: z.preprocess((val) => val, z.enum(ORDER)).catch(ORDER.new),
-});
+export const tweetPaginationQuerySchema = paginationQuerySchema
+  .partial()
+  .extend({
+    orderBy: z.preprocess((val) => val, z.enum(ORDER)).catch(ORDER.new),
+  });
 
 export const filterQuerySchema = z.object({
   //   filter: z.preprocess((val) => val, z.enum(FILTER)).catch(FILTER.all),
   activeFilters: z
-    .preprocess((val) => val, z.set(z.enum(FILTER)))
+    .preprocess(
+      (val) => {
+        if (typeof val === "string") {
+          return val.toLowerCase();
+        }
+        return val;
+      },
+      z.set(z.enum(FILTER)),
+    )
     .catch(new Set([FILTER.all])),
   search: z.string().trim().toLowerCase().catch(""),
   profileId: idNumberSchema.optional(),

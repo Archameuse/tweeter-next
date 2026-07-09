@@ -4,12 +4,13 @@ import PostMain, { TWEET_LIST_KEY } from "@/components/post/postMain";
 import PostSkeleton from "@/components/post/postSkeleton";
 import { PageContainer } from "@/components/ui/pageContainer";
 import { SectionFragment } from "@/components/ui/sectionFragment";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios, { AxiosError } from "axios";
 import { API_URL } from "@/utils/userHelpers";
 import { ActionButton } from "@/components/ui/actionButton";
+import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
 
 export enum STATUS {
   top = "Top",
@@ -19,14 +20,13 @@ export enum STATUS {
 export default function ExploreFeed() {
   const [status, setStatus] = useState<STATUS>(STATUS.top);
   const [search, setSearch] = useState<string>("");
-  const [page, setPage] = useState<number>(1);
+  const pageContainerRef = useRef<HTMLDivElement>(null);
   const searchEvent = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const searchData = formData.get("search") || "";
     if (typeof searchData === "string") {
       setSearch(searchData);
-      setPage(1);
     }
     // setSearch()
   };
@@ -47,7 +47,7 @@ export default function ExploreFeed() {
         {
           withCredentials: true,
           params: {
-            page: pageParam,
+            cursor: pageParam,
             limit: 3,
             scope: status.toLowerCase(),
             q: search,
@@ -57,11 +57,22 @@ export default function ExploreFeed() {
       // console.log(res.data);
       return res.data;
     },
-    getNextPageParam: (lastPage) =>
-      lastPage.hasNextPage ? lastPage.page + 1 : undefined,
-    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
     placeholderData: (prev) => prev,
     staleTime: 10 * 60 * 1000,
+    select: (data) => {
+      const exist = new Set<string>();
+      const filteredPages = data.pages.map((page) => ({
+        ...page,
+        data: page.data.filter((tweet) => {
+          if (exist.has(tweet.id)) return false;
+          exist.add(tweet.id);
+          return true;
+        }),
+      }));
+      return { ...data, pages: filteredPages };
+    },
   });
   useEffect(() => {
     if (isError) {
@@ -73,30 +84,27 @@ export default function ExploreFeed() {
       }
     }
   }, [isError, error]);
-
-  const handleStatus = (status: STATUS) => {
-    setStatus(status);
-    setPage(1);
-  };
-
+  const scrollLoaderRef = useScrollObserverCallback(fetchNextPage, {
+    rootRef: pageContainerRef,
+  });
   return (
-    <PageContainer>
+    <PageContainer ref={pageContainerRef}>
       <div>
         <aside className="sticky top-4 py-5 w-full lg:w-80 shrink-0 flex flex-col gap-4 bg-white dark:bg-secondaryGray shadow-md dark:shadow-primaryBlack rounded-lg h-fit">
           <SectionFragment
-            onClick={() => handleStatus(STATUS.top)}
+            onClick={() => setStatus(STATUS.top)}
             active={status === STATUS.top}
           >
             {STATUS.top}
           </SectionFragment>
           <SectionFragment
-            onClick={() => handleStatus(STATUS.latest)}
+            onClick={() => setStatus(STATUS.latest)}
             active={status === STATUS.latest}
           >
             {STATUS.latest}
           </SectionFragment>
           <SectionFragment
-            onClick={() => handleStatus(STATUS.media)}
+            onClick={() => setStatus(STATUS.media)}
             active={status === STATUS.media}
           >
             {STATUS.media}
@@ -136,30 +144,23 @@ export default function ExploreFeed() {
           ${isRefetching && "blur-md cursor-wait **:pointer-events-none"}
         `}
         >
-          {/* <ProfilePost
-          v-for="tweet in tweets"
-          @refresh-reply="refresh"
-          :post="tweet"
-        /> */}
-          {/* {mockTweets.map((tweet) => (
-            <PostMain tweet={tweet} key={tweet.id} />
-          ))} */}
-          {/* {mockTweets.map((tweet) => (
-            <PostMain tweet={tweet} key={tweet.id} />
-          ))} */}
           {!isPending && data?.pages
             ? data.pages.flatMap((page) =>
                 page.data.map((tweet) => (
                   <PostMain
                     tweet={tweet}
                     key={tweet.id}
-                    listKey={TWEET_LIST_KEY.explore}
+                    listKeys={[TWEET_LIST_KEY.explore]}
                   />
                 )),
               )
             : [1, 2, 3].map((key) => <PostSkeleton key={`skeleton-${key}`} />)}
           {data && hasNextPage && (
-            <ActionButton disabled={isFetching} onClick={() => fetchNextPage()}>
+            <ActionButton
+              disabled={isFetching}
+              onClick={() => fetchNextPage()}
+              ref={scrollLoaderRef}
+            >
               Load more
             </ActionButton>
           )}

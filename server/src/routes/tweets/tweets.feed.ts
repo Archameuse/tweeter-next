@@ -46,6 +46,7 @@ const app = new Hono();
 
 /**
  * REPLACE *_count fields with respective direct fetch for optimization once requests become to big
+ * REPLACE back if need for testing purposes, current pagination doesn't utilize them
  */
 const buildTweetQuery = (
   userId?: z.infer<typeof idNumberSchema>,
@@ -93,26 +94,26 @@ const buildTweetQuery = (
       ? sql<boolean>`EXISTS(SELECT 1 FROM ${saves} WHERE ${saves.tweet_id} = ${tweets.tweet_id} AND ${saves.user_id} = ${userId})`
       : sql<boolean>`FALSE`
     ).as("is_saved"),
-    likes_count:
-      sql<number>`(SELECT COUNT(*) FROM ${likes} WHERE ${likes.tweet_id} = ${tweets.tweet_id})`.as(
-        "likes_count",
-      ),
-    retweets_count:
-      sql<number>`(SELECT COUNT(*) FROM ${retweets} WHERE ${retweets.tweet_id} = ${tweets.tweet_id})`.as(
-        "retweets_count",
-      ),
-    saves_count:
-      sql<number>`(SELECT COUNT(*) FROM ${saves} WHERE ${saves.tweet_id} = ${tweets.tweet_id})`.as(
-        "saves_count",
-      ),
-    replies_count:
-      sql<number>`(SELECT COUNT(*) FROM ${tweets} AS ${replyCounter} WHERE ${replyCounter.reply_to} = ${tweets.tweet_id})`.as(
-        "replies_count",
-      ),
-    // likes_count: tweets.likes_count.as('likes_count'),
-    // retweets_count: tweets.retweets_count.as('retweets_count'),
-    // saves_count: tweets.saves_count.as('saves_count'),
-    // replies_count: tweets.replies_count.as('replies_count'),
+    // likes_count:
+    //   sql<number>`(SELECT COUNT(*) FROM ${likes} WHERE ${likes.tweet_id} = ${tweets.tweet_id})`.as(
+    //     "likes_count",
+    //   ),
+    // retweets_count:
+    //   sql<number>`(SELECT COUNT(*) FROM ${retweets} WHERE ${retweets.tweet_id} = ${tweets.tweet_id})`.as(
+    //     "retweets_count",
+    //   ),
+    // saves_count:
+    //   sql<number>`(SELECT COUNT(*) FROM ${saves} WHERE ${saves.tweet_id} = ${tweets.tweet_id})`.as(
+    //     "saves_count",
+    //   ),
+    // replies_count:
+    //   sql<number>`(SELECT COUNT(*) FROM ${tweets} AS ${replyCounter} WHERE ${replyCounter.reply_to} = ${tweets.tweet_id})`.as(
+    //     "replies_count",
+    //   ),
+    likes_count: tweets.likes_count.as("likes_count"),
+    retweets_count: tweets.retweets_count.as("retweets_count"),
+    saves_count: tweets.saves_count.as("saves_count"),
+    replies_count: tweets.replies_count.as("replies_count"),
     hashtag: sql<any>`(
             SELECT (${hashtags.hashtag}) 
             FROM ${tweets_hashtags} 
@@ -159,7 +160,7 @@ const pagination = <T extends SQLiteSelect>(
   selection: T,
   query: Partial<TweetPaginationInput> = {},
 ) => {
-  const { page, perPage, orderBy } = tweetPaginationQuerySchema.parse(query);
+  const { perPage, orderBy, cursor } = tweetPaginationQuerySchema.parse(query);
   return paginate(
     selection.orderBy(
       orderBy === ORDER.top
@@ -167,8 +168,18 @@ const pagination = <T extends SQLiteSelect>(
         : orderBy === ORDER.old
           ? asc(tweets.created_at)
           : desc(tweets.created_at),
+      orderBy === ORDER.old ? asc(tweets.tweet_id) : desc(tweets.tweet_id),
     ),
-    { page, perPage },
+    {
+      cursor,
+      idColName: tweets.tweet_id.name,
+      sortColName:
+        orderBy === ORDER.top
+          ? tweets.likes_count.name
+          : tweets.created_at.name,
+      perPage,
+      isAsc: orderBy === ORDER.old,
+    },
   );
 };
 
@@ -185,36 +196,37 @@ const filters = <T extends SQLiteSelect>(
     .parse(search);
   const parent = alias(tweets, "reply_to");
   const followed = alias(users, "followed_user");
-  return db.where(
-    and(
-      like(tweets.content, `%${escapedSearch}%`), //search filter
-      activeFilters.has(FILTER.media) //media filter
-        ? and(isNotNull(tweets.image), ne(tweets.image, ""))
-        : sql`TRUE`,
-      activeFilters.has(FILTER.likes) && profileId
-        ? sql`
+  return db
+    .where(
+      and(
+        like(tweets.content, `%${escapedSearch}%`), //search filter
+        activeFilters.has(FILTER.media) //media filter
+          ? and(isNotNull(tweets.image), ne(tweets.image, ""))
+          : sql`TRUE`,
+        activeFilters.has(FILTER.likes) && profileId
+          ? sql`
         EXISTS (
           SELECT 1 
           FROM ${likes} 
           WHERE ${likes.tweet_id} = ${tweets.tweet_id} 
           AND ${likes.user_id} = ${profileId})
       `
-        : sql`TRUE`, //is profileId user liked this tweet filter
-      activeFilters.has(FILTER.profileTweets) && profileId // profileId user own tweets or retweets
-        ? or(
-            isRetweet
-              ? eq(retweets.user_id, profileId)
-              : or(
-                  eq(tweets.user_id, profileId),
-                  activeFilters.has(FILTER.profileReplies)
-                    ? and(
-                        eq(parent.tweet_id, tweets.reply_to),
-                        eq(parent.user_id, profileId),
-                      )
-                    : sql`FALSE`,
-                ),
-            activeFilters.has(FILTER.profileTweetsFollowed)
-              ? sql`
+          : sql`TRUE`, //is profileId user liked this tweet filter
+        activeFilters.has(FILTER.profileTweets) && profileId // profileId user own tweets or retweets
+          ? or(
+              isRetweet
+                ? eq(retweets.user_id, profileId)
+                : or(
+                    eq(tweets.user_id, profileId),
+                    activeFilters.has(FILTER.profileReplies)
+                      ? and(
+                          eq(parent.tweet_id, tweets.reply_to),
+                          eq(parent.user_id, profileId),
+                        )
+                      : sql`FALSE`,
+                  ),
+              activeFilters.has(FILTER.profileTweetsFollowed)
+                ? sql`
                   EXISTS (
                   SELECT 1
                   FROM ${follows}
@@ -223,39 +235,40 @@ const filters = <T extends SQLiteSelect>(
                   WHERE ${follows.follower_id} = ${profileId}
                   AND ${!isRetweet ? tweets.user_id : retweets.user_id} = ${followed.user_id}
                 )`
-              : sql`FALSE`,
-          )
-        : sql`TRUE`,
-      activeFilters.has(FILTER.tweetReplies) && tweetId
-        ? isRetweet
-          ? sql`FALSE`
-          : eq(tweets.reply_to, tweetId)
-        : sql`TRUE`,
-    ),
-  );
+                : sql`FALSE`,
+            )
+          : sql`TRUE`,
+        activeFilters.has(FILTER.tweetReplies) && tweetId
+          ? isRetweet
+            ? sql`FALSE`
+            : eq(tweets.reply_to, tweetId)
+          : sql`TRUE`,
+      ),
+    )
+    .$dynamic();
 };
 
 // saved on /bookmarks + filters
-app.get("/bookmarks", authMiddleware, async (c) => {
-  const { page, scope, limit } = c.req.query();
-  const userId = c.get("userId");
-  const { data: rawData, ...metadata } = await pagination(
-    filters(
-      buildTweetQuery(userId).innerJoin(
-        saves,
-        and(eq(tweets.tweet_id, saves.tweet_id), eq(saves.user_id, userId)),
-      ),
-      { activeFilters: new Set([scope]) },
-    ),
-    { page, perPage: limit, orderBy: scope },
-  );
-  const data: Tweet[] = dbTweetToGlobalTweetSchema.array().parse(rawData);
-  return c.json({ data, ...metadata });
-});
+// app.get("/bookmarks", authMiddleware, async (c) => {
+//   const { page, scope, limit } = c.req.query();
+//   const userId = c.get("userId");
+//   const { data: rawData, ...metadata } = await pagination(
+//     filters(
+//       buildTweetQuery(userId).innerJoin(
+//         saves,
+//         and(eq(tweets.tweet_id, saves.tweet_id), eq(saves.user_id, userId)),
+//       ),
+//       { activeFilters: new Set([scope]) },
+//     ),
+//     { , perPage: limit, orderBy: scope },
+//   );
+//   const data: Tweet[] = dbTweetToGlobalTweetSchema.array().parse(rawData);
+//   return c.json({ data, ...metadata });
+// });
 
 // all w/o retweets on /explore (replies shown as normal tweets but with some marking that they are replies in fact) + filters+search
 app.get("/explore", optionalAuthMiddleware, async (c) => {
-  const { page, scope, limit, q } = c.req.query();
+  const { cursor, scope, limit, q } = c.req.query();
   const userId = c.get("userId");
   const { data: rawData, ...metadata } = await pagination(
     filters(buildTweetQuery(userId), {
@@ -263,7 +276,7 @@ app.get("/explore", optionalAuthMiddleware, async (c) => {
       search: q,
     }),
     {
-      page,
+      cursor,
       perPage: limit,
       orderBy: scope,
     },
@@ -273,65 +286,65 @@ app.get("/explore", optionalAuthMiddleware, async (c) => {
 });
 
 // profile on /user/:id and / users tweets+retweets + filters
-app.get("/user", optionalAuthMiddleware, async (c) => {
-  const { page, scope, limit, id } = c.req.query();
-  const userId = c.get("userId");
-  const processedScope = z
-    .preprocess(
-      (val) => val,
-      z.enum([FILTER.profileTweets, FILTER.profileReplies, FILTER.media]),
-    )
-    .catch(FILTER.profileTweets)
-    .parse(scope);
-  const processedId =
-    idSchema
-      .optional()
-      .refine((val) => val || userId, {
-        error: 'You need to get authenticated to view "home" feed',
-      })
-      .parse(id) ?? userId;
-  // const processedId =
-  //   z.coerce
-  //     .number()
-  //     .int()
-  //     .min(1)
-  //     .optional()
-  //     .refine((val) => val || userId, {
-  //       error: 'You need to get authenticated to view "home" feed',
-  //     })
-  //     .parse(id) ?? userId;
-  // if no id passed in query then fallback to current logged in user or crash
-  const activeFilters = new Set([
-    FILTER.profileTweets,
-    FILTER.profileTweetsFollowed,
-    processedScope,
-  ]);
-  const { data: rawData, ...metadata } = await pagination(
-    activeFilters.has(FILTER.profileReplies)
-      ? filters(buildTweetQuery(userId, false), {
-          profileId: processedId,
-          activeFilters,
-        })
-      : union(
-          filters(buildTweetQuery(userId, false), {
-            profileId: processedId,
-            activeFilters,
-          }),
-          filters(buildTweetQuery(userId, true), {
-            profileId: processedId,
-            activeFilters,
-            isRetweet: true,
-          }),
-        ).$dynamic(),
-    { page, perPage: limit },
-  );
-  const data = dbTweetToGlobalTweetSchema.array().parse(rawData);
-  return c.json({ data, ...metadata });
-});
+// app.get("/user", optionalAuthMiddleware, async (c) => {
+//   const { page, scope, limit, id } = c.req.query();
+//   const userId = c.get("userId");
+//   const processedScope = z
+//     .preprocess(
+//       (val) => val,
+//       z.enum([FILTER.profileTweets, FILTER.profileReplies, FILTER.media]),
+//     )
+//     .catch(FILTER.profileTweets)
+//     .parse(scope);
+//   const processedId =
+//     idSchema
+//       .optional()
+//       .refine((val) => val || userId, {
+//         error: 'You need to get authenticated to view "home" feed',
+//       })
+//       .parse(id) ?? userId;
+//   // const processedId =
+//   //   z.coerce
+//   //     .number()
+//   //     .int()
+//   //     .min(1)
+//   //     .optional()
+//   //     .refine((val) => val || userId, {
+//   //       error: 'You need to get authenticated to view "home" feed',
+//   //     })
+//   //     .parse(id) ?? userId;
+//   // if no id passed in query then fallback to current logged in user or crash
+//   const activeFilters = new Set([
+//     FILTER.profileTweets,
+//     FILTER.profileTweetsFollowed,
+//     processedScope,
+//   ]);
+//   const { data: rawData, ...metadata } = await pagination(
+//     activeFilters.has(FILTER.profileReplies)
+//       ? filters(buildTweetQuery(userId, false), {
+//           profileId: processedId,
+//           activeFilters,
+//         })
+//       : union(
+//           filters(buildTweetQuery(userId, false), {
+//             profileId: processedId,
+//             activeFilters,
+//           }),
+//           filters(buildTweetQuery(userId, true), {
+//             profileId: processedId,
+//             activeFilters,
+//             isRetweet: true,
+//           }),
+//         ).$dynamic(),
+//     { page, perPage: limit },
+//   );
+//   const data = dbTweetToGlobalTweetSchema.array().parse(rawData);
+//   return c.json({ data, ...metadata });
+// });
 
 // replies /replies/:id list of tweets that are replying to this specific id open through modal
 app.get("/replies", optionalAuthMiddleware, async (c) => {
-  const { id, page, limit } = c.req.query();
+  const { id, cursor, limit } = c.req.query();
   if (!id) throw new MissingIdError();
   const processedId = idSchema.parse(id);
   const userId = c.get("userId");
@@ -340,7 +353,13 @@ app.get("/replies", optionalAuthMiddleware, async (c) => {
       tweetId: processedId,
       activeFilters: new Set([FILTER.tweetReplies]),
     }),
-    { page, perPage: limit },
+    {
+      perPage: limit,
+      cursor,
+      sortColName: tweets.created_at.name,
+      idColName: tweets.tweet_id.name,
+      orderBy: ORDER.new,
+    },
   );
   const data = dbTweetToGlobalTweetSchema.array().parse(rawData);
   return c.json({ data, ...metadata });

@@ -20,6 +20,7 @@ import {
 } from "@tanstack/react-query";
 import axios, { AxiosError } from "axios";
 import { API_URL } from "@/utils/userHelpers";
+import { useModalStore } from "../../../store/useModalStore";
 
 export enum TWEET_LIST_KEY {
   explore = "exploreTweets",
@@ -30,12 +31,14 @@ export enum TWEET_LIST_KEY {
 
 export default function PostMain({
   tweet,
-  listKey,
+  listKeys,
 }: {
   tweet: Tweet;
-  listKey: TWEET_LIST_KEY;
+  listKeys: TWEET_LIST_KEY[];
 }) {
   const { user } = useUser();
+  const setReplyData = useModalStore((state) => state.setReplyData);
+  const setRepliesData = useModalStore((state) => state.setRepliesData);
   const date = useMemo(() => {
     if (!tweet.created_at) return undefined;
     const now = new Date();
@@ -80,12 +83,6 @@ export default function PostMain({
     [user, tweet.onlyFollowers, tweet.replyAllowed],
   );
 
-  const retweetLoading = false;
-  const likeLoading = false;
-  const saveLoading = false;
-  const retweetActive = false;
-  const likeActive = false;
-  const saveActive = false;
   const actionState = useCallback(
     (action: POST_ACTION) => {
       if (action === POST_ACTION.like) return tweet.liked;
@@ -104,49 +101,62 @@ export default function PostMain({
         withCredentials: true,
       }),
     onMutate: async (action: POST_ACTION) => {
-      await queryClient.cancelQueries({ queryKey: [listKey], exact: false });
-      const prevData = queryClient.getQueryData<
-        InfiniteData<PaginationResponse<Tweet[]>>
-      >([listKey]);
-      queryClient.setQueriesData<InfiniteData<PaginationResponse<Tweet[]>>>(
-        { queryKey: [listKey], exact: false },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              data: page.data.map((t) =>
-                t.id === tweet.id
-                  ? {
-                      ...t,
-                      ...(action === POST_ACTION.like && {
-                        likes: t.liked ? t.likes - 1 : t.likes + 1,
-                        liked: !t.liked,
-                      }),
-                      ...(action === POST_ACTION.retweet && {
-                        retweets: t.retweeted ? t.retweets - 1 : t.retweets + 1,
-                        retweeted: !t.retweeted,
-                      }),
-                      ...(action === POST_ACTION.save && {
-                        saves: t.saved ? t.saves - 1 : t.saves + 1,
-                        saved: !t.saved,
-                      }),
-                    }
-                  : t,
-              ),
-            })),
-          };
-        },
-      );
-      return { prevData };
+      const prevDataList: {
+        key: TWEET_LIST_KEY;
+        data: [
+          readonly unknown[],
+          InfiniteData<PaginationResponse<Tweet[]>, unknown> | undefined,
+        ][];
+      }[] = [];
+      for (const listKey of listKeys) {
+        await queryClient.cancelQueries({ queryKey: [listKey], exact: false });
+        const prevData = queryClient.getQueriesData<
+          InfiniteData<PaginationResponse<Tweet[]>>
+        >({ queryKey: [listKey], exact: false });
+        queryClient.setQueriesData<InfiniteData<PaginationResponse<Tweet[]>>>(
+          { queryKey: [listKey], exact: false },
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                data: page.data.map((t) =>
+                  t.id === tweet.id
+                    ? {
+                        ...t,
+                        ...(action === POST_ACTION.like && {
+                          likes: t.liked ? t.likes - 1 : t.likes + 1,
+                          liked: !t.liked,
+                        }),
+                        ...(action === POST_ACTION.retweet && {
+                          retweets: t.retweeted
+                            ? t.retweets - 1
+                            : t.retweets + 1,
+                          retweeted: !t.retweeted,
+                        }),
+                        ...(action === POST_ACTION.save && {
+                          saves: t.saved ? t.saves - 1 : t.saves + 1,
+                          saved: !t.saved,
+                        }),
+                      }
+                    : t,
+                ),
+              })),
+            };
+          },
+        );
+        prevDataList.push({ key: listKey, data: prevData });
+      }
+      return { prevDataList };
     },
     onError: (err, _variables, context) => {
-      if (context?.prevData) {
-        queryClient.setQueriesData(
-          { queryKey: [listKey], exact: false },
-          context.prevData,
-        );
+      if (context?.prevDataList) {
+        for (const prevData of context.prevDataList)
+          queryClient.setQueriesData(
+            { queryKey: prevData.key, exact: false },
+            prevData.data,
+          );
       }
       if (err instanceof AxiosError) {
         if (err.response?.data?.message) {
@@ -157,6 +167,18 @@ export default function PostMain({
       return alert("Unknown error");
     },
   });
+
+  const handleAction = (action: POST_ACTION) => {
+    if (!user) return alert("You need to be logged in to perform this action");
+    mutate(action);
+  };
+  const handleReplies = () => {
+    if (tweet.replies <= 0) return;
+    setRepliesData({
+      tweetId: tweet.id,
+      listKeys: [...listKeys, TWEET_LIST_KEY.replies],
+    });
+  };
 
   return (
     <div className="w-full select-none">
@@ -204,7 +226,11 @@ export default function PostMain({
           <li>{symbolFormatter(tweet.likes, 1)} Likes</li>
         </ul>
         <div className="p-4 flex gap-4 items-center border-y border-skeletonColor">
-          <PostAction icon={MessageSquare}>
+          <PostAction
+            icon={MessageSquare}
+            onClick={handleReplies}
+            disabled={tweet.replies <= 0}
+          >
             <span className="hidden sm:block">Comments</span>
           </PostAction>
           <PostAction
@@ -212,7 +238,7 @@ export default function PostMain({
             active={tweet.retweeted}
             action={POST_ACTION.retweet}
             disabled={isPending}
-            onClick={() => mutate(POST_ACTION.retweet)}
+            onClick={() => handleAction(POST_ACTION.retweet)}
           >
             <span className="hidden sm:block">Retweet</span>
           </PostAction>
@@ -221,7 +247,7 @@ export default function PostMain({
             active={tweet.liked}
             action={POST_ACTION.like}
             disabled={isPending}
-            onClick={() => mutate(POST_ACTION.like)}
+            onClick={() => handleAction(POST_ACTION.like)}
           >
             <span className="hidden sm:block">Like</span>
           </PostAction>
@@ -230,7 +256,7 @@ export default function PostMain({
             active={tweet.saved}
             action={POST_ACTION.save}
             disabled={isPending}
-            onClick={() => mutate(POST_ACTION.save)}
+            onClick={() => handleAction(POST_ACTION.save)}
           >
             <span className="hidden sm:block">Save</span>
           </PostAction>
@@ -240,7 +266,10 @@ export default function PostMain({
             <div className="h-10">
               <UserAvatar size={64} src={user?.avatar} />
             </div>
-            <div className="grow cursor-pointer min-h-full overflow-y-auto max-h-96 px-3 py-2 text-sm font-noto-sans bg-tertiaryGray dark:bg-secondaryGray rounded-xl">
+            <div
+              onClick={() => setReplyData({ tweetId: tweet.id })}
+              className="grow cursor-pointer min-h-full overflow-y-auto max-h-96 px-3 py-2 text-sm font-noto-sans bg-tertiaryGray dark:bg-secondaryGray rounded-xl"
+            >
               <div className="h-6 z-10 aspect-square float-right cursor-pointer">
                 <LucideImage className="text-[#BDBDBD] dark:text-tertiaryGray w-full h-full hover:text-secondaryGray dark:hover:text-primaryGray active:text-primaryBlack dark:active:text-primaryBlack" />
               </div>

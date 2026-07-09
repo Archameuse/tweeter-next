@@ -9,7 +9,7 @@ export function ActionButton({
   className,
   version = BUTTON_VERSIONS.default,
   ...props
-}: React.ComponentPropsWithoutRef<"button"> & {
+}: React.ComponentPropsWithRef<"button"> & {
   className?: string;
   version?: BUTTON_VERSIONS;
   children: React.ReactNode;

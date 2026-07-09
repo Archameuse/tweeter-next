@@ -1,6 +1,6 @@
 export default function PostSkeleton() {
   return (
-    <div className="w-full max-w-xl select-none">
+    <div className="w-xl select-none">
       <div className="w-full p-5 bg-white dark:bg-primaryBlack shadow-md rounded-md flex flex-col gap-5">
         <div>
           <div className="flex h-10 gap-4">

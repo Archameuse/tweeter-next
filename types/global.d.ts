@@ -72,10 +72,8 @@ declare global {
 
   interface PaginationResponse<T> {
     data: Awaited<T>;
-    total: number;
-    page: number;
     perPage: number;
-    totalPages: number;
     hasNextPage: boolean;
+    nextCursor: string | null;
   }
 }

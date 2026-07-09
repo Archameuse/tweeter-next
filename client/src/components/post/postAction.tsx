@@ -1,5 +1,5 @@
 import { Loader2, LucideIcon } from "lucide-react";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 
 /**
  * SHOULD MATCH API ENDPOINTS
@@ -18,6 +18,7 @@ interface PostActionProps extends React.ComponentPropsWithoutRef<"button"> {
   active?: boolean;
   reverse?: boolean;
   className?: string;
+  children?: React.ReactNode;
 }
 
 export default function PostAction({
@@ -27,6 +28,7 @@ export default function PostAction({
   reverse,
   icon: Icon,
   className,
+  children,
   ...props
 }: PostActionProps) {
   const activeClass = useMemo(() => {
@@ -54,6 +56,7 @@ export default function PostAction({
         `}
     >
       <Icon className={reverse ? "-scale-x-100" : ""} />
+      {children}
     </button>
   );
 }

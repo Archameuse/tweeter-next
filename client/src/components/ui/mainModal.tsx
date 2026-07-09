@@ -7,12 +7,14 @@ export default function ModalMain({
   headline,
   onClose,
   noScroll,
+  containerRef,
 }: {
   ref: Ref<HTMLDialogElement>;
   headline?: string;
   onClose: () => void;
   children: React.ReactNode;
   noScroll?: boolean;
+  containerRef?: Ref<HTMLDivElement>;
 }) {
   return (
     <dialog
@@ -22,7 +24,7 @@ export default function ModalMain({
       onCancel={(e) => e.target === e.currentTarget && onClose()}
       className="w-full max-w-2xl rounded-lg bg-transparent p-0 m-auto backdrop:bg-black/50 open:flex open:flex-col justify-center overflow-hidden"
     >
-      <div className="flex flex-col relative h-full min-h-0 bg-white dark:bg-primaryBlack rounded-lg shadow">
+      <div className="flex flex-col relative h-full min-h-0 bg-background dark:bg-primaryBlack rounded-lg shadow">
         <div className="flex justify-between items-start p-4 rounded-t border-b shrink-0">
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white shrink-0">
             {headline}
@@ -37,7 +39,8 @@ export default function ModalMain({
           </button>
         </div>
         <div
-          className={`min-h-0 ${noScroll ? "overflow-y-hidden" : "overflow-y-auto"}`}
+          ref={containerRef}
+          className={`min-h-0 ${noScroll ? "overflow-y-hidden" : "overflow-y-auto [overflow-anchor:none]"}`}
         >
           {children}
         </div>

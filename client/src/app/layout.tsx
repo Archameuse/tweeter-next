@@ -6,6 +6,8 @@ import PostModal from "@/components/post/postModal";
 import { fetchMe } from "@/utils/userHelpers";
 import { Providers } from "@/providers/providers";
 import { getServerCookie } from "@/utils/serverUserHelpers";
+import PostReplyModal from "@/components/post/postReplyModal";
+import PostRepliesModal from "@/components/post/postRepliesModal";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -43,6 +45,8 @@ export default async function RootLayout({
           <Header />
           {children}
           <PostModal />
+          <PostReplyModal />
+          <PostRepliesModal />
         </Providers>
       </body>
     </html>
