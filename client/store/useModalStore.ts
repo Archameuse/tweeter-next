@@ -9,7 +9,12 @@ interface MediaData {
 
 interface ReplyData {
   tweetId: string;
+  listKeys: TWEET_LIST_KEY[];
 }
+/**
+ * Potentially add something like prev reply stack so user can go back in nested replies
+ * for now no reason to do something like this tho
+ */
 interface RepliesData {
   tweetId: string;
   listKeys: TWEET_LIST_KEY[];

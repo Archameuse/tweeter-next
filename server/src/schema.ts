@@ -52,7 +52,7 @@ export const usernameSchema = z
 
 export const looseUsernameSchema = usernameSchema.catch((ctx) => {
   console.error(`Corrupt username "${ctx.value}":`, ctx.issues);
-  return String(ctx);
+  return "Unknown";
 });
 
 /**

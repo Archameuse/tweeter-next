@@ -43,6 +43,17 @@ declare global {
     replyTo?: number | string | null;
   }
 
+  interface TweetResponse {
+    tweet: Tweet;
+    newRepliesAmount?: number;
+  }
+
+  interface TweetActionResponse {
+    newLikeAmount?: number;
+    newSavesAmount?: number;
+    newRetweetsAmount?: number;
+  }
+
   interface UserSettings extends User {
     banner?: string | null;
     status?: string | null;

@@ -7,6 +7,7 @@ import {
   looseIdSchema,
   looseUsernameSchema,
   optionalBooleanSchema,
+  usernameSchema,
 } from "@/schema.js";
 import { paginationQuerySchema } from "@/utils/drizzleHandlers.js";
 import z from "zod";
@@ -37,7 +38,7 @@ export enum ACTION {
  */
 export const dbTweetSchema = z.object({
   tweet_id: looseIdSchema,
-  content: z.string(),
+  content: z.string().catch("Can't get this message's content"),
   image: imageLinkSchema.nullish().catch(null),
   created_at: z.preprocess((val) => {
     if (typeof val === "number" && !Number.isNaN(val)) {
@@ -45,7 +46,7 @@ export const dbTweetSchema = z.object({
     } else if (typeof val === "string") {
       return new Date(val);
     }
-    return val;
+    return new Date();
   }, z.date()),
   only_followers: optionalBooleanSchema,
   author: z.object({
@@ -76,7 +77,7 @@ export const dbTweetSchema = z.object({
   saves_count: countSchema,
   retweets_count: countSchema,
   replies_count: countSchema,
-  retweeted_by: looseUsernameSchema.nullish(),
+  retweeted_by: usernameSchema.nullish().catch(null),
   hashtag: hashtagSchema.nullish().catch(null),
   is_liked: optionalBooleanSchema,
   is_saved: optionalBooleanSchema,

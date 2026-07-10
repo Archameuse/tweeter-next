@@ -6,7 +6,7 @@ import ImageUploadModal from "@/components/modals/imageUploadModal";
 import { ActionButton, BUTTON_VERSIONS } from "@/components/ui/actionButton";
 import ImageWrapper from "@/components/ui/imageWrapper";
 import validateImage from "@/utils/validateImage";
-import { useMutation, useMutationState } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { CheckCircleIcon, LucideImageMinus } from "lucide-react";
 import { useState } from "react";
 import axios, { AxiosError } from "axios";
@@ -297,7 +297,7 @@ export default function SettingsFeed({
           <label className="w-40 text-right">User avatar</label>
           <div className="w-full flex flex-wrap space-x-20 space-y-4">
             <div className="w-40 aspect-square relative rounded-2xl overflow-hidden border-4 border-primaryGray shadow-md">
-              <Loadbar progress={avatarProgress} />
+              <ImageLoadbar progress={avatarProgress} />
               <ImageWrapper
                 className={avatarProgress > 0 ? "blur-md" : ""}
                 src={avatarUrl}
@@ -323,7 +323,7 @@ export default function SettingsFeed({
           <label className="w-40 text-right">Profile banner</label>
           <div className="w-full flex flex-col gap-4 items-center">
             <div className="w-full h-60 relative rounded-2xl overflow-hidden border-4 border-primaryGray shadow-md">
-              <Loadbar progress={bannerProgress} />
+              <ImageLoadbar progress={bannerProgress} />
               {bannerUrl && (
                 <>
                   <ImageWrapper
@@ -392,7 +392,7 @@ export default function SettingsFeed({
   );
 }
 
-function Loadbar({ progress }: { progress: number }) {
+export function ImageLoadbar({ progress }: { progress: number }) {
   if (progress <= 0) return null;
 
   return (

@@ -4,7 +4,6 @@ import UnderlinedText from "./ui/underlinedText";
 import {
   Earth,
   Hash,
-  Loader2Icon,
   LucideImageOff,
   LucideImagePlus,
   UsersRound,
@@ -16,24 +15,121 @@ import PostImage from "./post/postImage";
 import { ActionButton } from "./ui/actionButton";
 import ImageUploadModal from "./modals/imageUploadModal";
 import validateImage from "@/utils/validateImage";
+import {
+  InfiniteData,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useUser } from "@/providers/UserProvider";
+import axios, { AxiosError } from "axios";
+import { API_URL } from "@/utils/userHelpers";
+import { ImageLoadbar } from "@/app/settings/feed";
+import { TWEET_LIST_KEY } from "./post/postMain";
+import { useModalStore } from "../../store/useModalStore";
 
 const MAX_IMAGE_SIZE = 1024 * 1024 * 40; //bytes
 
-export default function TweetInput({ limit = 50 }: { limit?: number }) {
+export default function TweetInput({
+  limit = 150,
+  typeOpenToTop,
+  replyTo,
+  listKeys,
+}: {
+  listKeys: TWEET_LIST_KEY[];
+  limit?: number;
+  typeOpenToTop?: boolean;
+  replyTo?: string;
+}) {
+  const { user } = useUser();
   const [hash, setHash] = useState<string | null>(null);
-  const [message, setMessage] = useState<string>("");
-  const [messageLoading, setMessageLoading] = useState<boolean>(false);
-  const [image, setImage] = useState<string | null>("/temp/ (30).jpg");
-  const [imageLoading, setImageLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>(""); // have to keep useState logic for the reactive limit handling
+  const [image, setImage] = useState<string | null>("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageProgress, setImageProgress] = useState<number>(0);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [chooseType, setChooseType] = useState<boolean>(false);
   const [everyoneCanReply, setEveryoneCanReply] = useState<boolean>(true);
-  const user = { image: "/temp/ (2).jpg", username: "TestUser" };
-  const replyId = 0;
   const insideClickWrapper = useRef<HTMLDivElement>(null);
-
   const messageBoxRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const setReplyData = useModalStore((state) => state.setReplyData);
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: async (data: FormData) => {
+      const res = await axios.post<Tweet>(`${API_URL}/tweets`, data, {
+        withCredentials: true,
+        onUploadProgress: (progress) => {
+          if (progress.progress) {
+            setImageProgress(Math.floor(progress.progress * 100));
+          }
+        },
+      });
+      return res.data;
+    },
+    onSettled: () => {
+      setImageProgress(0);
+    },
+    onSuccess: () => {
+      setImage(null);
+      setImageFile(null);
+      setHash(null);
+      setMessage("");
+      if (replyTo) {
+        alert("Reply was successful");
+        setReplyData(null);
+      }
+    },
+    onMutate: async () => {
+      const prevDataList: {
+        key: readonly unknown[];
+        data: InfiniteData<PaginationResponse<Tweet[]>, unknown> | undefined;
+      }[] = [];
+      for (const listKey of listKeys) {
+        await queryClient.cancelQueries({ queryKey: [listKey], exact: false });
+        const [[prevKey, prevData]] = queryClient.getQueriesData<
+          InfiniteData<PaginationResponse<Tweet[]>>
+        >({ queryKey: [listKey], exact: false });
+        if (replyTo) {
+          queryClient.setQueriesData<InfiniteData<PaginationResponse<Tweet[]>>>(
+            { queryKey: [listKey], exact: false },
+            (old) => {
+              if (!old) return old;
+              return {
+                ...old,
+                pages: old.pages.map((page) => ({
+                  ...page,
+                  data: page.data.map((t) =>
+                    t.id === replyTo
+                      ? {
+                          ...t,
+                          replies: t.replies + 1,
+                        }
+                      : t,
+                  ),
+                })),
+              };
+            },
+          );
+        }
+        prevDataList.push({ key: prevKey, data: prevData });
+      }
+      return { prevDataList };
+    },
+    onError: (err, _variables, context) => {
+      if (context?.prevDataList) {
+        for (const { key, data } of context.prevDataList) {
+          queryClient.setQueriesData({ queryKey: key, exact: false }, data);
+        }
+      }
+      if (err instanceof AxiosError) {
+        if (err.response?.data?.message) {
+          console.error(err);
+          return alert(err.response?.data?.message);
+        }
+      }
+      return alert("Unknown error");
+    },
+  });
 
   const addHashtag = () => {
     const tag = prompt(
@@ -61,8 +157,9 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
     // }
   };
   const clearImage = () => {
+    if (image && image.startsWith("blob:")) URL.revokeObjectURL(image);
     setImage("");
-    setImageLoading(false);
+    setImageFile(null);
     setImageProgress(0);
   };
 
@@ -80,9 +177,30 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
     if (!localUrl) return alert(error);
     if (image && image.startsWith("blob:")) URL.revokeObjectURL(image);
     setImage(localUrl);
+    setImageFile(file);
     setShowModal(false);
   };
-  const sendTweet = () => {};
+  const sendTweet = () => {
+    if (message.length < 1) {
+      return alert("Message can't be empty");
+    }
+    if (message.length > limit) {
+      return alert(`Message should be less than ${limit} characters`);
+    }
+    const formData = new FormData();
+    const newTweet: TweetInput = {
+      content: message,
+      onlyFollowers: !everyoneCanReply,
+      ...(hash && { hashtag: hash }),
+      ...(replyTo && { replyTo: replyTo }),
+    };
+    formData.append("tweet", JSON.stringify(newTweet));
+    if (imageFile) {
+      formData.append("image", imageFile);
+    }
+
+    mutate(formData);
+  };
 
   const selectReplyType = (type: boolean) => {
     setEveryoneCanReply(type);
@@ -106,7 +224,7 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
   return (
     <div className="min-w-0 w-full bg-white dark:bg-primaryBlack rounded-lg shadow-sm px-5 py-3 flex flex-col gap-2 relative">
       <UnderlinedText className="flex justify-between flex-wrap [word-break:break-word]">
-        {(replyId ? "Reply" : "Tweet something") + (hash ? ` #${hash}` : "")}
+        {(replyTo ? "Reply" : "Tweet something") + (hash ? ` #${hash}` : "")}
         <button
           onClick={addHashtag}
           className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -116,7 +234,7 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
       </UnderlinedText>
       <div className="min-h-20 h-fit flex gap-4">
         <div className="h-10">
-          <UserAvatar size={64} src={user.image} />
+          <UserAvatar size={64} src={user.avatar} />
         </div>
         <div className="flex flex-col grow items-start min-w-0">
           <div className="w-full grow px-3 py-2 text-sm font-noto-sans rounded-xl">
@@ -125,8 +243,8 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
               onInput={inputHandler}
               // onPaste={pasteHandler}
               data-placeholder="What's happening?"
-              contentEditable="plaintext-only"
-              className={`overflow-y-auto max-h-60 scrollbar-none bg-transparent text-justify focus:outline-none wrap-break-word [hyphens:auto] before:pointer-events-none before:text-[#BDBDBD] focus:before:invisible relative before:absolute before:left-0 ${!message ? "before:content-[attr(data-placeholder)]" : ""} `}
+              contentEditable={isPending ? "false" : "plaintext-only"}
+              className={`overflow-y-auto max-h-60 min-h-5 scrollbar-none bg-transparent text-justify focus:outline-none wrap-break-word [hyphens:auto] before:pointer-events-none before:text-[#BDBDBD] focus:before:invisible relative before:absolute before:left-0 ${!message ? "before:content-[attr(data-placeholder)]" : ""} `}
             ></div>
             <span
               className={`float-right ${remaining < 0 ? "text-red-500" : 0}`}
@@ -135,20 +253,9 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
             </span>
             {image && (
               <div className="w-full relative h-96 rounded-md shadow-sm overflow-hidden mt-8">
-                {imageLoading && (
-                  <div className="absolute w-full h-full top-0 left-0 z-20 flex flex-col justify-center">
-                    <div className="w-full bg-gray-200 rounded-full dark:bg-gray-700">
-                      <div
-                        className="bg-blue-600 text-xs select-none font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
-                        style={{ width: imageProgress + "%" }}
-                      >
-                        {imageProgress}%
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <ImageLoadbar progress={imageProgress} />
                 <div
-                  className={`relative h-full ${imageLoading ? "blur-md" : ""}`}
+                  className={`relative h-full ${imageProgress > 0 ? "blur-md" : ""}`}
                 >
                   <div className="absolute top-0 right-0 z-10 h-8 w-8">
                     <ActionIcon onClick={clearImage} icon={LucideImageOff} />
@@ -160,14 +267,14 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
           </div>
           <div className="flex justify-between w-full items-center flex-wrap space-y-2">
             <div
-              className={`h-6 flex gap-4 text-primaryBlue select-none ${messageLoading ? "pointer-events-none" : ""}`}
+              className={`h-6 flex gap-4 text-primaryBlue select-none ${isPending ? "pointer-events-none opacity-60" : ""}`}
             >
               <ActionIcon
                 onClick={openImageUploadModal}
                 icon={LucideImagePlus}
               />
               <div
-                className="h-full flex items-center gap-2"
+                className="h-full flex items-center gap-2 relative"
                 ref={insideClickWrapper}
               >
                 <div
@@ -182,7 +289,9 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
                     : "People you follow"}
                 </span>
                 {chooseType && (
-                  <div className="bg-white dark:bg-primaryBlack px-3 py-2 flex flex-col gap-4 absolute -bottom-2 translate-y-full drop-shadow-md rounded-xl w-64 z-10">
+                  <div
+                    className={`bg-white dark:bg-primaryBlack px-3 py-2 flex flex-col gap-4 absolute drop-shadow-md rounded-xl w-64 z-10 ${typeOpenToTop ? "-top-2 -translate-y-full" : "-bottom-2 translate-y-full"}`}
+                  >
                     <div className="flex flex-col text-xs gap-2">
                       <span className="font-semibold text-primaryBlack dark:text-white">
                         Who can reply?
@@ -209,13 +318,9 @@ export default function TweetInput({ limit = 50 }: { limit?: number }) {
                 )}
               </div>
             </div>
-            {!messageLoading ? (
-              <ActionButton onClick={sendTweet}>Tweet</ActionButton>
-            ) : (
-              <ActionButton className="cursor-wait opacity-80 scale-100!">
-                <Loader2Icon className="animate-spin" />
-              </ActionButton>
-            )}
+            <ActionButton onClick={sendTweet} disabled={isPending}>
+              Tweet
+            </ActionButton>
           </div>
         </div>
       </div>

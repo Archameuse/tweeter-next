@@ -19,7 +19,13 @@ export default function PostReplyModal() {
   if (!data) return null;
   return (
     <ModalMain onClose={() => setData(null)} ref={modalRef} headline="Reply">
-      <TweetInput />
+      <div className="min-h-80 flex items-center">
+        <TweetInput
+          typeOpenToTop
+          replyTo={data.tweetId}
+          listKeys={data.listKeys}
+        />
+      </div>
     </ModalMain>
   );
 }

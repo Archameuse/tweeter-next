@@ -95,22 +95,24 @@ export default function PostMain({
 
   const queryClient = useQueryClient();
   const { mutate, isPending } = useMutation({
-    mutationFn: async (action: POST_ACTION) =>
-      await axios(`${API_URL}/tweets/${action}/${tweet.id}`, {
-        method: actionState(action) ? "DELETE" : "POST",
-        withCredentials: true,
-      }),
+    mutationFn: async (action: POST_ACTION) => {
+      const res = await axios<TweetActionResponse>(
+        `${API_URL}/tweets/${action}/${tweet.id}`,
+        {
+          method: actionState(action) ? "DELETE" : "POST",
+          withCredentials: true,
+        },
+      );
+      return res.data;
+    },
     onMutate: async (action: POST_ACTION) => {
       const prevDataList: {
-        key: TWEET_LIST_KEY;
-        data: [
-          readonly unknown[],
-          InfiniteData<PaginationResponse<Tweet[]>, unknown> | undefined,
-        ][];
+        key: readonly unknown[];
+        data: InfiniteData<PaginationResponse<Tweet[]>, unknown> | undefined;
       }[] = [];
       for (const listKey of listKeys) {
         await queryClient.cancelQueries({ queryKey: [listKey], exact: false });
-        const prevData = queryClient.getQueriesData<
+        const [[prevKey, prevData]] = queryClient.getQueriesData<
           InfiniteData<PaginationResponse<Tweet[]>>
         >({ queryKey: [listKey], exact: false });
         queryClient.setQueriesData<InfiniteData<PaginationResponse<Tweet[]>>>(
@@ -146,17 +148,16 @@ export default function PostMain({
             };
           },
         );
-        prevDataList.push({ key: listKey, data: prevData });
+        if (prevKey && prevData)
+          prevDataList.push({ key: prevKey, data: prevData });
       }
       return { prevDataList };
     },
     onError: (err, _variables, context) => {
       if (context?.prevDataList) {
-        for (const prevData of context.prevDataList)
-          queryClient.setQueriesData(
-            { queryKey: prevData.key, exact: false },
-            prevData.data,
-          );
+        for (const { key, data } of context.prevDataList) {
+          queryClient.setQueriesData({ queryKey: key, exact: false }, data);
+        }
       }
       if (err instanceof AxiosError) {
         if (err.response?.data?.message) {
@@ -267,7 +268,9 @@ export default function PostMain({
               <UserAvatar size={64} src={user?.avatar} />
             </div>
             <div
-              onClick={() => setReplyData({ tweetId: tweet.id })}
+              onClick={() =>
+                setReplyData({ tweetId: tweet.id, listKeys: listKeys })
+              }
               className="grow cursor-pointer min-h-full overflow-y-auto max-h-96 px-3 py-2 text-sm font-noto-sans bg-tertiaryGray dark:bg-secondaryGray rounded-xl"
             >
               <div className="h-6 z-10 aspect-square float-right cursor-pointer">

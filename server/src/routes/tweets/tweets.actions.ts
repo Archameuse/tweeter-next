@@ -13,6 +13,7 @@ import { Hono } from "hono";
 import z from "zod";
 import {
   ACTION,
+  dbTweetSchema,
   dbTweetToGlobalTweetSchema,
   globalTweetSchema,
   globalTweetToDbTweetSchema,
@@ -314,6 +315,7 @@ app.post("/", authMiddleware, async (c) => {
     }
     let hashtagId: number | undefined;
     let replyTweetData;
+    let newRepliesAmount: number | undefined;
     // if we have replyTo -> check that such tweet exists or 404
     if (tweetData.reply_to) {
       replyTweetData = await tx.query.tweets.findFirst({
@@ -323,15 +325,26 @@ app.post("/", authMiddleware, async (c) => {
         },
         where: { tweet_id: tweetData.reply_to },
       });
+
       if (!replyTweetData) {
         throw new Tweet404Error(404, true);
       }
+      const [newRepliesResponse] = await tx
+        .update(tweets)
+        .set({
+          replies_count: sql<number>`${tweets.replies_count} + 1`,
+        })
+        .where(eq(tweets.tweet_id, tweetData.reply_to))
+        .returning({ newRepliesAmount: tweets.replies_count });
+      if (!newRepliesResponse) throw new ActionNoReturnError("Reply");
+      newRepliesAmount = newRepliesResponse.newRepliesAmount;
     }
     // try to create tweet with data we have, return its id
     const [insertedTweet] = await tx
       .insert(tweets)
       .values(tweetData)
       .returning();
+
     if (!insertedTweet) {
       throw new HTTPException(500, {
         message:
@@ -372,15 +385,20 @@ app.post("/", authMiddleware, async (c) => {
         })
         .where(eq(hashtags.hashtag_id, hashtagId));
     }
-    return dbTweetToGlobalTweetSchema.parse({
-      ...insertedTweet,
-      author: tweetAuthor,
-      reply_to_author: replyTweetData && {
-        tweet_id: replyTweetData.tweet_id,
-        username: replyTweetData.author.username,
-      },
-      hashtag,
-    });
+
+    const parsedResponse: TweetResponse = {
+      tweet: dbTweetToGlobalTweetSchema.parse({
+        ...insertedTweet,
+        author: tweetAuthor,
+        reply_to_author: replyTweetData && {
+          tweet_id: replyTweetData.tweet_id,
+          username: replyTweetData.author.username,
+        },
+        hashtag,
+      }),
+      newRepliesAmount,
+    };
+    return parsedResponse;
   });
   return c.json(response, 201);
 });
