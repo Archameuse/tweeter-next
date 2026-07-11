@@ -44,9 +44,11 @@ export const dbUserSettingsToGlobalUserSettingsSchema =
     }),
   );
 
-export const dbProfileSchema = dbUserSettingsSchema.extend({
+export const dbProfileSchema = dbUserSchema.extend({
   followers_count: countSchema,
   following_count: countSchema,
+  banner: imageLinkSchema.nullish().catch(null),
+  status: imageLinkSchema.nullish().catch(null),
 });
 
 export const dbProfileToGlobalProfileSchema = dbProfileSchema.transform(

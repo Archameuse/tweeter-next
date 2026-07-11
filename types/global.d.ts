@@ -33,7 +33,8 @@ declare global {
     saved?: boolean;
     retweeted?: boolean;
     replyTo?: { id: string; username: string } | null; // id - tweet
-    replyAllowed?: boolean; //reply allowed if AUTHOR of the tweet follows currently logged in user
+    replyAllowed?: boolean; // reply allowed if AUTHOR of the tweet follows currently logged in user
+    inProgress?: boolean; // for newly sent tweets while their sending is in progress
   }
 
   interface TweetInput extends Pick<

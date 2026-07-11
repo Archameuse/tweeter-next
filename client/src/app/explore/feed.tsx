@@ -1,7 +1,6 @@
 "use client";
 
-import PostMain, { TWEET_LIST_KEY } from "@/components/post/postMain";
-import PostSkeleton from "@/components/post/postSkeleton";
+import { TWEET_LIST_KEY } from "@/components/post/postMain";
 import { PageContainer } from "@/components/ui/pageContainer";
 import { SectionFragment } from "@/components/ui/sectionFragment";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -9,8 +8,8 @@ import { Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import axios, { AxiosError } from "axios";
 import { API_URL } from "@/utils/userHelpers";
-import { ActionButton } from "@/components/ui/actionButton";
 import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
+import PostsContainer from "@/components/post/postsContainer";
 
 export enum STATUS {
   top = "Top",
@@ -138,33 +137,16 @@ export default function ExploreFeed() {
             </button>
           </div>
         </form>
-        <div
-          className={`
-            flex flex-col gap-10 max-w-xl m-auto w-full lg:max-w-fit
-          ${isRefetching && "blur-md cursor-wait **:pointer-events-none"}
-        `}
-        >
-          {!isPending && data?.pages
-            ? data.pages.flatMap((page) =>
-                page.data.map((tweet) => (
-                  <PostMain
-                    tweet={tweet}
-                    key={tweet.id}
-                    listKeys={[TWEET_LIST_KEY.explore]}
-                  />
-                )),
-              )
-            : [1, 2, 3].map((key) => <PostSkeleton key={`skeleton-${key}`} />)}
-          {data && hasNextPage && (
-            <ActionButton
-              disabled={isFetching}
-              onClick={() => fetchNextPage()}
-              ref={scrollLoaderRef}
-            >
-              Load more
-            </ActionButton>
-          )}
-        </div>
+        <PostsContainer
+          fetchNextPage={fetchNextPage}
+          listKeys={[TWEET_LIST_KEY.explore]}
+          scrollLoaderCallback={scrollLoaderRef}
+          data={data}
+          isFetching={isFetching}
+          isPending={isPending}
+          isRefetching={isRefetching}
+          hasNextPage={hasNextPage}
+        />
       </div>
     </PageContainer>
   );

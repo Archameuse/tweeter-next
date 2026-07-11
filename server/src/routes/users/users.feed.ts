@@ -44,7 +44,7 @@ const DEFAULT_PAGE_LIMIT = 10;
 // /follows scope=followers :id -> list of this user's followers
 // /follows scope=follows  :id -> list of users this user is following
 app.get("/follows", optionalAuthMiddleware, async (c) => {
-  const { id, page, limit, scope } = c.req.query();
+  const { id, cursor, limit, scope } = c.req.query();
   if (!id) throw new MissingIdError();
   const authId = c.get("userId");
   const processedTargetId = idNumberSchema.parse(id);
@@ -92,7 +92,12 @@ app.get("/follows", optionalAuthMiddleware, async (c) => {
       )
       .orderBy(desc(follows.created_at))
       .$dynamic(),
-    { page, perPage: limit },
+    {
+      cursor,
+      perPage: limit,
+      idColName: users.user_id.name,
+      sortColName: users.followers_count.name,
+    },
   );
   return c.json(dbProfileToGlobalProfileSchema.array().parse(data));
 });
@@ -100,6 +105,9 @@ app.get("/follows", optionalAuthMiddleware, async (c) => {
 // /popular -> top 5 users by followers, maybe some algo in future
 app.get("/popular", optionalAuthMiddleware, async (c) => {
   const authId = c.get("userId");
+  /**
+   * Change to just users.followers_count or users.following_count for optimization
+   */
   const followersCount =
     sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id})`.as(
       "followers_count",

@@ -27,6 +27,7 @@ export enum TWEET_LIST_KEY {
   bookmarks = "bookmarksTweets",
   replies = "repliesTweets",
   profile = "profileTweets",
+  home = "homeTweets",
 }
 
 export default function PostMain({
@@ -182,7 +183,9 @@ export default function PostMain({
   };
 
   return (
-    <div className="w-full select-none">
+    <div
+      className={`w-full select-none ${tweet.inProgress ? "opacity-60 cursor-wait **:pointer-events-none" : ""}`}
+    >
       {tweet.retweetedBy && (
         <div className="pl-5 w-full flex items-center text-primaryGray dark:text-tertiaryGray">
           <Repeat2 />
@@ -230,7 +233,7 @@ export default function PostMain({
           <PostAction
             icon={MessageSquare}
             onClick={handleReplies}
-            disabled={tweet.replies <= 0}
+            disabled={tweet.replies <= 0 || tweet.inProgress}
           >
             <span className="hidden sm:block">Comments</span>
           </PostAction>
@@ -238,7 +241,7 @@ export default function PostMain({
             icon={Repeat2}
             active={tweet.retweeted}
             action={POST_ACTION.retweet}
-            disabled={isPending}
+            disabled={isPending || tweet.inProgress}
             onClick={() => handleAction(POST_ACTION.retweet)}
           >
             <span className="hidden sm:block">Retweet</span>
@@ -247,7 +250,7 @@ export default function PostMain({
             icon={Heart}
             active={tweet.liked}
             action={POST_ACTION.like}
-            disabled={isPending}
+            disabled={isPending || tweet.inProgress}
             onClick={() => handleAction(POST_ACTION.like)}
           >
             <span className="hidden sm:block">Like</span>
@@ -256,7 +259,7 @@ export default function PostMain({
             icon={Bookmark}
             active={tweet.saved}
             action={POST_ACTION.save}
-            disabled={isPending}
+            disabled={isPending || tweet.inProgress}
             onClick={() => handleAction(POST_ACTION.save)}
           >
             <span className="hidden sm:block">Save</span>

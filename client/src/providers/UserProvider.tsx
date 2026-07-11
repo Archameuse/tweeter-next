@@ -6,6 +6,7 @@ import {
   GUEST_ONLY_ROUTES,
   USER_ONLY_ROUTES,
 } from "@/utils/userHelpers";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
@@ -46,6 +47,7 @@ export function UserProvider({
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const refresh = useCallback(async () => {
     setLoading(true);
     setUser(await fetchMe());
@@ -110,6 +112,9 @@ export function UserProvider({
       router.replace("/explore");
     }
   }, [user, pathname, router]);
+  useEffect(() => {
+    queryClient.invalidateQueries();
+  }, [user, queryClient]);
   useEffect(() => {
     fetchMe().then((freshUser) => setUser(freshUser));
   }, [refresh]);

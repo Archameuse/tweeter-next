@@ -26,12 +26,12 @@ export function Providers({
   });
   return (
     <ThemeProvider>
-      <UserProvider initialUser={initialUser}>
-        <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <UserProvider initialUser={initialUser}>
           <ReactQueryDevtools initialIsOpen={false} />
           {children}
-        </QueryClientProvider>
-      </UserProvider>
+        </UserProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }

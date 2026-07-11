@@ -395,6 +395,7 @@ app.post("/", authMiddleware, async (c) => {
           username: replyTweetData.author.username,
         },
         hashtag,
+        reply_allowed: true,
       }),
       newRepliesAmount,
     };

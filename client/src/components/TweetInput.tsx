@@ -55,35 +55,32 @@ export default function TweetInput({
   const setReplyData = useModalStore((state) => state.setReplyData);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: async (data: FormData) => {
-      const res = await axios.post<Tweet>(`${API_URL}/tweets`, data, {
-        withCredentials: true,
-        onUploadProgress: (progress) => {
-          if (progress.progress) {
-            setImageProgress(Math.floor(progress.progress * 100));
-          }
+    mutationFn: async (newTweet: TweetInput) => {
+      const formData = new FormData();
+      formData.append("tweet", JSON.stringify(newTweet));
+      if (imageFile) {
+        formData.append("image", imageFile);
+      }
+      const res = await axios.post<TweetResponse>(
+        `${API_URL}/tweets`,
+        formData,
+        {
+          withCredentials: true,
+          onUploadProgress: (progress) => {
+            if (progress.progress) {
+              setImageProgress(Math.floor(progress.progress * 100));
+            }
+          },
         },
-      });
+      );
       return res.data;
     },
-    onSettled: () => {
-      setImageProgress(0);
-    },
-    onSuccess: () => {
-      setImage(null);
-      setImageFile(null);
-      setHash(null);
-      setMessage("");
-      if (replyTo) {
-        alert("Reply was successful");
-        setReplyData(null);
-      }
-    },
-    onMutate: async () => {
+    onMutate: async (newTweet) => {
       const prevDataList: {
         key: readonly unknown[];
         data: InfiniteData<PaginationResponse<Tweet[]>, unknown> | undefined;
       }[] = [];
+      const tempId = replyTo ? null : crypto.randomUUID();
       for (const listKey of listKeys) {
         await queryClient.cancelQueries({ queryKey: [listKey], exact: false });
         const [[prevKey, prevData]] = queryClient.getQueriesData<
@@ -110,10 +107,75 @@ export default function TweetInput({
               };
             },
           );
+        } else if (tempId) {
+          queryClient.setQueriesData<InfiniteData<PaginationResponse<Tweet[]>>>(
+            { queryKey: [listKey], exact: false },
+            (old) => {
+              if (!old || !user || !old.pages.length) return old;
+              const nextPages = [...old.pages];
+              nextPages[0] = {
+                ...nextPages[0],
+                data: [
+                  {
+                    author: user,
+                    content: newTweet.content,
+                    created_at: new Date(),
+                    id: tempId,
+                    likes: 0,
+                    replies: 0,
+                    retweets: 0,
+                    saves: 0,
+                    hashtag: newTweet.hashtag,
+                    image: image,
+                    inProgress: true,
+                  },
+                  ...nextPages[0].data,
+                ],
+              };
+              return {
+                ...old,
+                pages: nextPages,
+              };
+            },
+          );
         }
         prevDataList.push({ key: prevKey, data: prevData });
       }
-      return { prevDataList };
+      return { prevDataList, tempId };
+    },
+    onSettled: () => {
+      setImageProgress(0);
+    },
+    onSuccess: (response, _variables, context) => {
+      setImage(null);
+      setImageFile(null);
+      setHash(null);
+      setMessage("");
+      if (messageBoxRef.current) messageBoxRef.current.innerText = "";
+      if (replyTo) {
+        alert("Reply was successful");
+        setReplyData(null);
+      } else if (response?.tweet && context?.prevDataList && context?.tempId) {
+        for (const { key } of context.prevDataList) {
+          queryClient.setQueriesData<InfiniteData<PaginationResponse<Tweet[]>>>(
+            { queryKey: key, exact: false },
+            (old) => {
+              if (!old || !user || !old.pages.length) return old;
+              const nextPages = [...old.pages];
+              nextPages[0] = {
+                ...nextPages[0],
+                data: nextPages[0].data.map((tweet) =>
+                  context.tempId === tweet.id ? response.tweet : tweet,
+                ),
+              };
+              return {
+                ...old,
+                pages: nextPages,
+              };
+            },
+          );
+        }
+      }
     },
     onError: (err, _variables, context) => {
       if (context?.prevDataList) {
@@ -187,19 +249,14 @@ export default function TweetInput({
     if (message.length > limit) {
       return alert(`Message should be less than ${limit} characters`);
     }
-    const formData = new FormData();
     const newTweet: TweetInput = {
       content: message,
       onlyFollowers: !everyoneCanReply,
       ...(hash && { hashtag: hash }),
       ...(replyTo && { replyTo: replyTo }),
     };
-    formData.append("tweet", JSON.stringify(newTweet));
-    if (imageFile) {
-      formData.append("image", imageFile);
-    }
 
-    mutate(formData);
+    mutate(newTweet);
   };
 
   const selectReplyType = (type: boolean) => {

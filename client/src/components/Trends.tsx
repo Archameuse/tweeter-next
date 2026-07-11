@@ -1,45 +1,34 @@
 import { useMemo } from "react";
 import UnderlinedText from "./ui/underlinedText";
 import symbolFormatter from "@/utils/symbolFormatter";
-
-const mockTrends: Trend[] = [
-  {
-    id: 1,
-    name: "NextJS15",
-    tweets: 142500,
-  },
-  {
-    id: 2,
-    name: "TailwindCSS",
-    tweets: 89300,
-  },
-  {
-    id: 3,
-    name: "React19",
-    tweets: 124000,
-  },
-  {
-    id: 4,
-    name: "TypeScript",
-    tweets: 65100,
-  },
-  {
-    id: 5,
-    name: "WebDev",
-    tweets: 210500,
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { API_URL } from "@/utils/userHelpers";
+import { Loader2 } from "lucide-react";
 
 export default function Trends() {
-  if (!mockTrends) return null; // if we cant get and util we g et trends we return null
+  const { data, isError, isPending } = useQuery({
+    queryKey: ["trends"],
+    queryFn: async () => {
+      const res = await axios.get<Trend[]>(`${API_URL}/tweets/trends`);
+      return res.data;
+    },
+  });
   return (
     <div className="w-full px-5 py-3 bg-white dark:bg-primaryBlack rounded-xl shadow-sm flex flex-col gap-6">
       <UnderlinedText>Trends for you</UnderlinedText>
-      {mockTrends.map((trend) => (
-        <Trend key={trend.id} tweets={trend.tweets}>
-          {trend.name}
-        </Trend>
-      ))}
+      {isError ? (
+        <div>Unable to load trends</div>
+      ) : isPending ? (
+        <Loader2 className="animate-spin" />
+      ) : (
+        data &&
+        data.map((trend) => (
+          <Trend key={trend.id} tweets={trend.tweets}>
+            {trend.hashtag}
+          </Trend>
+        ))
+      )}
     </div>
   );
 }

@@ -3,106 +3,75 @@
 import { PageContainer } from "@/components/ui/pageContainer";
 import { SectionFragment } from "@/components/ui/sectionFragment";
 import { STATUS } from "../explore/feed";
-import { useState } from "react";
-import PostMain from "@/components/post/postMain";
+import { useEffect, useRef, useState } from "react";
+import { TWEET_LIST_KEY } from "@/components/post/postMain";
+import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
+import PostsContainer from "@/components/post/postsContainer";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { API_URL } from "@/utils/userHelpers";
+import axios, { AxiosError } from "axios";
 
 export default function BookmarksFeed() {
   const [status, setStatus] = useState<STATUS>(STATUS.top);
-  const loading = false;
-  const mockTweets: Tweet[] = [
-    {
-      id: 1,
-      content: "Building the future with Next.js and Tailwind CSS! 🚀",
-      user: {
-        id: 101,
-        username: "tech_coder",
-        image: "/temp/ (19).jpg",
-        followed: true,
-      },
-      date: new Date("2026-06-23T10:00:00Z"),
-      likes: 42,
-      replies: 5,
-      retweets: 12,
-      hashtag: "#webdev",
-      image: "/temp/ (3).mp4",
-      liked: true,
-      saved: false,
-      retweeted: false,
+  const pageContainerRef = useRef<HTMLDivElement>(null);
+  const {
+    data,
+    isError,
+    error,
+    isRefetching,
+    isPending,
+    isFetching,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: [TWEET_LIST_KEY.bookmarks, status],
+    queryFn: async ({ pageParam }) => {
+      const res = await axios.get<PaginationResponse<Tweet[]>>(
+        `${API_URL}/tweets/bookmarks`,
+        {
+          withCredentials: true,
+          params: {
+            cursor: pageParam,
+            limit: 3,
+            scope: status.toLowerCase(),
+          },
+        },
+      );
+      // console.log(res.data);
+      return res.data;
     },
-    {
-      id: 2,
-      content:
-        "Caught an incredible sunrise over the mountains this morning. Absolute perfection.",
-      user: {
-        id: 102,
-        username: "nature_wanderer",
-        image: "/temp/ (11).jpg",
-      },
-      date: new Date("2026-06-23T08:15:00Z"),
-      likes: 128,
-      replies: 24,
-      retweets: 35,
-      image: "/temp/ (13).jpg",
-      liked: false,
-      saved: true,
-      retweeted: true,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
+    placeholderData: (prev) => prev,
+    staleTime: 10 * 60 * 1000,
+    select: (data) => {
+      const exist = new Set<string>();
+      const filteredPages = data.pages.map((page) => ({
+        ...page,
+        data: page.data.filter((tweet) => {
+          if (exist.has(tweet.id)) return false;
+          exist.add(tweet.id);
+          return true;
+        }),
+      }));
+      return { ...data, pages: filteredPages };
     },
-    {
-      id: 3,
-      content: "This is a private update exclusively for the inner circle.",
-      user: {
-        id: 103,
-        username: "secret_agent",
-        followed: false,
-      },
-      date: new Date("2026-06-22T22:30:00Z"),
-      likes: 12,
-      replies: 2,
-      retweets: 1,
-      onlyFollowers: true,
-      liked: false,
-      saved: false,
-      retweeted: false,
-    },
-    {
-      id: 4,
-      content:
-        "Check out this incredible open source tool I stumbled upon today!",
-      user: {
-        id: 104,
-        username: "dev_share",
-        image: "/temp/ (1).jpg",
-        followed: true,
-      },
-      date: new Date("2026-06-23T14:45:00Z"),
-      likes: 85,
-      replies: 8,
-      retweets: 19,
-      retweetedBy: "tech_coder",
-      hashtag: "#opensource",
-      liked: true,
-      saved: true,
-      retweeted: true,
-    },
-    {
-      id: 5,
-      content: "Coffee secured. Code mode activated. Let's get to work.",
-      user: {
-        id: 105,
-        username: "coffee_bytes",
-      },
-      date: new Date("2026-06-24T06:00:00Z"),
-      likes: 310,
-      replies: 45,
-      retweets: 88,
-      image: "/temp/ (21).jpg",
-      liked: false,
-      saved: false,
-      retweeted: false,
-    },
-  ];
+  });
+  useEffect(() => {
+    if (isError) {
+      if (error instanceof AxiosError) {
+        const errorMessage = error.response?.data?.message;
+        alert(errorMessage || error.message);
+      } else {
+        alert("Unknown error");
+      }
+    }
+  }, [isError, error]);
+  const scrollLoaderRef = useScrollObserverCallback(fetchNextPage, {
+    rootRef: pageContainerRef,
+  });
   return (
-    <PageContainer>
+    <PageContainer ref={pageContainerRef}>
       <div>
         <aside className="sticky top-4 py-5 w-full lg:w-80 shrink-0 flex flex-col gap-4 bg-white dark:bg-secondaryGray shadow-md dark:shadow-primaryBlack rounded-lg h-fit">
           <SectionFragment
@@ -125,13 +94,16 @@ export default function BookmarksFeed() {
           </SectionFragment>
         </aside>
       </div>
-      <div
-        className={`flex flex-col gap-10 max-w-xl m-auto w-full lg:max-w-fit ${loading && "blur-md cursor-wait **:pointer-events-none"}`}
-      >
-        {mockTweets.map((tweet) => (
-          <PostMain tweet={tweet} key={tweet.id} />
-        ))}
-      </div>
+      <PostsContainer
+        fetchNextPage={fetchNextPage}
+        listKeys={[TWEET_LIST_KEY.bookmarks]}
+        scrollLoaderCallback={scrollLoaderRef}
+        data={data}
+        hasNextPage={hasNextPage}
+        isFetching={isFetching}
+        isPending={isPending}
+        isRefetching={isRefetching}
+      />
     </PageContainer>
   );
 }

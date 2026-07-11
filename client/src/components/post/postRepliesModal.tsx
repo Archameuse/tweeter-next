@@ -3,12 +3,11 @@ import { useEffect, useRef } from "react";
 import ModalMain from "../ui/mainModal";
 import { useModalStore } from "../../../store/useModalStore";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import PostMain, { TWEET_LIST_KEY } from "./postMain";
+import { TWEET_LIST_KEY } from "./postMain";
 import axios, { AxiosError } from "axios";
 import { API_URL } from "@/utils/userHelpers";
-import PostSkeleton from "./postSkeleton";
-import { ActionButton } from "../ui/actionButton";
 import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
+import PostsContainer from "./postsContainer";
 
 export default function PostRepliesModal() {
   const modalRef = useRef<HTMLDialogElement>(null);
@@ -94,35 +93,17 @@ export default function PostRepliesModal() {
       headline="Replies"
       containerRef={modalContainerRef}
     >
-      <div
-        className={`
-            flex flex-col gap-10 max-w-xl m-auto w-full lg:max-w-fit
-          ${isRefetching && "blur-md cursor-wait **:pointer-events-none"}
-        `}
-      >
-        {!isPending && data?.pages
-          ? data.pages.flatMap((page) =>
-              page.data.map((tweet) => (
-                <PostMain
-                  tweet={tweet}
-                  key={tweet.id}
-                  listKeys={modalData.listKeys}
-                />
-              )),
-            )
-          : [1, 2].map((key) => (
-              <PostSkeleton key={`skeleton-${modalData.tweetId}-${key}`} />
-            ))}
-        {data && hasNextPage && (
-          <ActionButton
-            disabled={isFetching}
-            onClick={() => fetchNextPage()}
-            ref={scrollLoaderRef}
-          >
-            Load more
-          </ActionButton>
-        )}
-      </div>
+      <PostsContainer
+        fetchNextPage={fetchNextPage}
+        listKeys={modalData.listKeys}
+        scrollLoaderCallback={scrollLoaderRef}
+        data={data}
+        hasNextPage={hasNextPage}
+        isFetching={isFetching}
+        isPending={isPending}
+        isRefetching={isRefetching}
+        replyToId={modalData.tweetId}
+      />
     </ModalMain>
   );
 }
