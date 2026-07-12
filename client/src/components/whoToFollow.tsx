@@ -30,7 +30,7 @@ export default function WhoToFollow() {
             <TinyProfile
               key={profile.id}
               user={profile}
-              listKeys={[USER_LIST_KEY.whoToFollow]}
+              listKeys={[[USER_LIST_KEY.whoToFollow]]}
             />
           ))
         )}

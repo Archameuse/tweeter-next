@@ -1,116 +1,124 @@
 "use client";
 
-import PostMain from "@/components/post/postMain";
+import { TWEET_LIST_KEY } from "@/components/post/postMain";
+import PostsContainer from "@/components/post/postsContainer";
 import ImageWrapper from "@/components/ui/imageWrapper";
 import { PageContainer } from "@/components/ui/pageContainer";
 import { SectionFragment } from "@/components/ui/sectionFragment";
+import { USER_LIST_KEY } from "@/components/user/followButton";
 import ProfileTab from "@/components/user/profileTab";
-import { useState } from "react";
-
-const mockTweets: Tweet[] = [
-  {
-    id: 1,
-    content: "Building the future with Next.js and Tailwind CSS! 🚀",
-    user: {
-      id: 101,
-      username: "tech_coder",
-      image: "/temp/ (14).jpg",
-      followed: true,
-    },
-    date: new Date("2026-06-23T10:00:00Z"),
-    likes: 42,
-    replies: 5,
-    retweets: 12,
-    hashtag: "#webdev",
-    image: "/temp/ (4).mp4",
-    liked: true,
-    saved: false,
-    retweeted: false,
-  },
-  {
-    id: 2,
-    content:
-      "Caught an incredible sunrise over the mountains this morning. Absolute perfection.",
-    user: {
-      id: 102,
-      username: "nature_wanderer",
-      image: "/temp/ (12).jpg",
-    },
-    date: new Date("2026-06-23T08:15:00Z"),
-    likes: 128,
-    replies: 24,
-    retweets: 35,
-    image: "/temp/ (17).jpg",
-    liked: false,
-    saved: true,
-    retweeted: true,
-  },
-  {
-    id: 3,
-    content: "This is a private update exclusively for the inner circle.",
-    user: {
-      id: 103,
-      username: "secret_agent",
-      followed: false,
-    },
-    date: new Date("2026-06-22T22:30:00Z"),
-    likes: 12,
-    replies: 2,
-    retweets: 1,
-    onlyFollowers: true,
-    liked: false,
-    saved: false,
-    retweeted: false,
-  },
-  {
-    id: 4,
-    content:
-      "Check out this incredible open source tool I stumbled upon today!",
-    user: {
-      id: 104,
-      username: "dev_share",
-      image: "/temp/ (25).jpg",
-      followed: true,
-    },
-    date: new Date("2026-06-23T14:45:00Z"),
-    likes: 85,
-    replies: 8,
-    retweets: 19,
-    retweetedBy: "tech_coder",
-    hashtag: "#opensource",
-    liked: true,
-    saved: true,
-    retweeted: true,
-  },
-  {
-    id: 5,
-    content: "Coffee secured. Code mode activated. Let's get to work.",
-    user: {
-      id: 105,
-      username: "coffee_bytes",
-    },
-    date: new Date("2026-06-24T06:00:00Z"),
-    likes: 310,
-    replies: 45,
-    retweets: 88,
-    image: "/temp/ (28).jpg",
-    liked: false,
-    saved: false,
-    retweeted: false,
-  },
-];
+import { API_URL } from "@/utils/userHelpers";
+import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import axios, { AxiosError } from "axios";
+import { useEffect, useRef, useState } from "react";
 
 enum STATUS {
-  tweets = "Tweets",
-  replies = "Tweets & replies",
-  media = "Media",
-  likes = "Likes",
+  tweets = "tweets",
+  replies = "replies",
+  media = "media",
+  likes = "likes",
 }
 
-export default function UserFeed({ profile }: { profile?: Profile }) {
+export default function UserFeed({
+  initialProfile,
+}: {
+  initialProfile: Profile;
+}) {
   const [status, setStatus] = useState<STATUS>(STATUS.tweets);
-  const loadingTweets = false;
-  if (!profile) return null; // would need to throw 404
+  const pageContainerRef = useRef<HTMLElement>(null);
+  const {
+    data: profile,
+    error: profileError,
+    isError: isProfileError,
+  } = useQuery({
+    queryKey: [USER_LIST_KEY.profile, initialProfile.id],
+    initialData: initialProfile,
+    queryFn: async () => {
+      const res = await axios.get<Profile>(`${API_URL}/users`, {
+        withCredentials: true,
+        params: {
+          id: initialProfile.id,
+          scope: "profile",
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const {
+    data,
+    isError,
+    error,
+    isRefetching,
+    isPending,
+    isFetching,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: [TWEET_LIST_KEY.profile, initialProfile.id, status],
+    queryFn: async ({ pageParam }) => {
+      const res = await axios.get<PaginationResponse<Tweet[]>>(
+        `${API_URL}/tweets/user`,
+        {
+          withCredentials: true,
+          params: {
+            cursor: pageParam,
+            id: initialProfile.id,
+            limit: 3,
+            scope: status.toLowerCase(),
+          },
+        },
+      );
+      return res.data;
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
+    placeholderData: (prev) => prev,
+    select: (data) => {
+      const exist = new Set<string>();
+      const filteredPages = data.pages.map((page) => ({
+        ...page,
+        data: page.data.filter((tweet) => {
+          const id = tweet.retweetedBy
+            ? `retweet-${tweet.retweetedBy}-${tweet.id}`
+            : tweet.id;
+          if (exist.has(id)) return false;
+          exist.add(id);
+          return true;
+        }),
+      }));
+      return { ...data, pages: filteredPages };
+    },
+  });
+
+  useEffect(() => {
+    if (isProfileError) {
+      if (profileError instanceof AxiosError) {
+        const errorMessage = profileError.response?.data?.message;
+        alert(errorMessage || profileError.message);
+      } else {
+        alert("Unknown error fetching profile");
+      }
+    }
+    if (isError) {
+      if (error instanceof AxiosError) {
+        const errorMessage = error.response?.data?.message;
+        alert(errorMessage || error.message);
+      } else {
+        alert("Unknown error fetching tweets");
+      }
+    }
+  }, [isProfileError, profileError, error, isError]);
+  const scrollLoaderRef = useScrollObserverCallback(fetchNextPage, {
+    rootRef: pageContainerRef,
+  });
+  if (!profile)
+    return (
+      <div className="text-4xl text-center mt-8">
+        Unexpected error cleared profile
+      </div>
+    ); // in case some hard error breaks profile data for some reason (realistically should not ever happen) outside test environment like throwing an error with react query devtools
   return (
     <PageContainer>
       <div className="flex flex-col lg:flex-row flex-wrap gap-6 w-full">
@@ -125,25 +133,25 @@ export default function UserFeed({ profile }: { profile?: Profile }) {
               onClick={() => setStatus(STATUS.tweets)}
               active={status === STATUS.tweets}
             >
-              {STATUS.tweets}
+              Tweets
             </SectionFragment>
             <SectionFragment
               onClick={() => setStatus(STATUS.replies)}
               active={status === STATUS.replies}
             >
-              {STATUS.replies}
+              Tweets & replies
             </SectionFragment>
             <SectionFragment
               onClick={() => setStatus(STATUS.media)}
               active={status === STATUS.media}
             >
-              {STATUS.media}
+              Media
             </SectionFragment>
             <SectionFragment
               onClick={() => setStatus(STATUS.likes)}
               active={status === STATUS.likes}
             >
-              {STATUS.likes}
+              Likes
             </SectionFragment>
           </aside>
         </div>
@@ -153,13 +161,16 @@ export default function UserFeed({ profile }: { profile?: Profile }) {
           >
             <ProfileTab profile={profile} />
           </div>
-          <div
-            className={`flex flex-col gap-10 max-w-xl m-auto w-full lg:max-w-fit ${loadingTweets ? "blur-md cursor-wait **:pointer-events-none" : ""}`}
-          >
-            {mockTweets.map((tweet) => (
-              <PostMain tweet={tweet} key={tweet.id} />
-            ))}
-          </div>
+          <PostsContainer
+            fetchNextPage={fetchNextPage}
+            listKeys={[TWEET_LIST_KEY.profile]}
+            scrollLoaderCallback={scrollLoaderRef}
+            data={data}
+            hasNextPage={hasNextPage}
+            isFetching={isFetching}
+            isPending={isPending}
+            isRefetching={isRefetching}
+          />
         </div>
       </div>
     </PageContainer>

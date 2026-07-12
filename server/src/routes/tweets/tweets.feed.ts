@@ -296,9 +296,14 @@ app.get("/user", optionalAuthMiddleware, async (c) => {
   const processedScope = z
     .preprocess(
       (val) => val,
-      z.enum([FILTER.profileTweets, FILTER.profileReplies, FILTER.media]),
+      z.enum([
+        FILTER.profileTweets,
+        FILTER.profileReplies,
+        FILTER.media,
+        FILTER.likes,
+      ]),
     )
-    .optional()
+    .catch(FILTER.profileTweets)
     .parse(scope);
   const processedId = z
     .preprocess((val) => val ?? userId, idNumberSchema.optional())
@@ -310,11 +315,20 @@ app.get("/user", optionalAuthMiddleware, async (c) => {
     });
   // if no id passed in query then fallback to current logged in user or crash
 
-  const activeFilters = new Set([
-    FILTER.profileTweets,
-    FILTER.profileTweetsFollowed,
-  ]);
-  if (processedScope) activeFilters.add(processedScope);
+  // const activeFilters = new Set([
+  //   FILTER.profileTweets,
+  //   FILTER.profileTweetsFollowed,
+  // ]);
+
+  // if (processedScope) activeFilters.add(processedScope);
+  const activeFilters =
+    processedScope !== FILTER.likes
+      ? new Set([
+          FILTER.profileTweets,
+          FILTER.profileTweetsFollowed,
+          processedScope,
+        ])
+      : new Set([processedScope]);
 
   const { data: rawData, ...metadata } = await pagination(
     activeFilters.has(FILTER.profileReplies)

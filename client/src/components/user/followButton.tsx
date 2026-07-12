@@ -7,8 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import axios, { AxiosError } from "axios";
-import { Loader2, UserRoundMinus, UserRoundPlus } from "lucide-react";
-import { useState } from "react";
+import { UserRoundMinus, UserRoundPlus } from "lucide-react";
 import { ActionButton, BUTTON_VERSIONS } from "../ui/actionButton";
 
 export enum USER_LIST_KEY {
@@ -27,15 +26,15 @@ export default function FollowButton({
   listKeys,
   className,
   ...props
-}: React.ComponentProps<"div"> & {
+}: React.ComponentProps<"button"> & {
   profileId: string;
-  listKeys: USER_LIST_KEY[];
+  listKeys: (USER_LIST_KEY | string)[][];
   isFollowed?: boolean;
   small?: boolean;
 }) {
   const { user } = useUser();
   const queryClient = useQueryClient();
-  const { mutate, isPending } = useMutation({
+  const { mutate } = useMutation({
     mutationFn: async () => {
       const res = await axios(`${API_URL}/users/follow/${profileId}`, {
         withCredentials: true,
@@ -46,66 +45,83 @@ export default function FollowButton({
     onMutate: async () => {
       const prevDataList: {
         key: readonly unknown[];
-        data: InfiniteData<AnyUser[], unknown> | AnyUser[] | undefined;
+        data:
+          | InfiniteData<PaginationResponse<AnyUser[]>, unknown>
+          | AnyUser[]
+          | AnyUser
+          | undefined;
       }[] = [];
       for (const listKey of listKeys) {
-        const processedListKey = [
-          listKey,
-          ...(listKey === USER_LIST_KEY.profile ? [profileId] : []),
-        ];
+        // const processedListKey = [
+        //   ...listKey,
+        //   ...(listKey === USER_LIST_KEY.profile ? [profileId] : []),
+        // ];
         await queryClient.cancelQueries({
-          queryKey: processedListKey,
+          queryKey: listKey,
           exact: false,
         });
         const [[prevKey, prevData]] = queryClient.getQueriesData<
-          InfiniteData<AnyUser[]> | AnyUser[]
-        >({ queryKey: processedListKey, exact: false });
-        queryClient.setQueriesData<InfiniteData<AnyUser[]> | AnyUser[]>(
-          { queryKey: processedListKey, exact: false },
-          (old) => {
-            if (!old) return old;
-            if ("pages" in old) {
-              const returnData: InfiniteData<AnyUser[]> = {
-                ...old,
-                pages: old.pages.map((page) =>
-                  page.map((user) =>
-                    user.id === profileId
-                      ? {
-                          ...user,
-                          followed: !user.followed,
-                          ...("followers" in user
-                            ? {
-                                followers: user.followed
-                                  ? user.followers - 1
-                                  : user.followers + 1,
-                              }
-                            : {}),
-                        }
-                      : user,
-                  ),
+          InfiniteData<PaginationResponse<AnyUser[]>> | AnyUser[] | AnyUser
+        >({ queryKey: listKey, exact: false });
+        queryClient.setQueriesData<
+          InfiniteData<PaginationResponse<AnyUser[]>> | AnyUser[] | AnyUser
+        >({ queryKey: listKey, exact: false }, (old) => {
+          if (!old) return old;
+          if ("pages" in old) {
+            const returnData: InfiniteData<PaginationResponse<AnyUser[]>> = {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                data: page.data.map((user) =>
+                  user.id === profileId
+                    ? {
+                        ...user,
+                        followed: !user.followed,
+                        ...("followers" in user
+                          ? {
+                              followers: user.followed
+                                ? user.followers - 1
+                                : user.followers + 1,
+                            }
+                          : {}),
+                      }
+                    : user,
                 ),
-              };
-              return returnData;
-            } else {
-              const returnData: AnyUser[] = old.map((user) =>
-                user.id === profileId
-                  ? {
-                      ...user,
-                      followed: !user.followed,
-                      ...("followers" in user
-                        ? {
-                            followers: user.followed
-                              ? user.followers - 1
-                              : user.followers + 1,
-                          }
-                        : {}),
-                    }
-                  : user,
-              );
-              return returnData;
-            }
-          },
-        );
+              })),
+            };
+            return returnData;
+          } else if (Array.isArray(old)) {
+            const returnData: AnyUser[] = old.map((user) =>
+              user.id === profileId
+                ? {
+                    ...user,
+                    followed: !user.followed,
+                    ...("followers" in user
+                      ? {
+                          followers: user.followed
+                            ? user.followers - 1
+                            : user.followers + 1,
+                        }
+                      : {}),
+                  }
+                : user,
+            );
+            return returnData;
+          } else {
+            const returnData: AnyUser = {
+              ...old,
+              followed: !old.followed,
+              ...("followers" in old
+                ? {
+                    followers: old.followed
+                      ? old.followers - 1
+                      : old.followers + 1,
+                  }
+                : {}),
+            };
+            return returnData;
+          }
+        });
         prevDataList.push({ key: prevKey, data: prevData });
       }
       return { prevDataList };
@@ -116,9 +132,9 @@ export default function FollowButton({
           queryClient.setQueriesData({ queryKey: key, exact: false }, data);
         }
       }
+      // console.error(err);
       if (err instanceof AxiosError) {
         if (err.response?.data?.message) {
-          console.error(err);
           return alert(err.response?.data?.message);
         }
       }
@@ -129,11 +145,12 @@ export default function FollowButton({
   if (!user || user.id === profileId) return null;
   return (
     <ActionButton
-      className="flex gap-1 justify-center items-center w-32 h-12"
+      {...props}
+      className={`flex gap-1 justify-center items-center w-32 h-12 ${className ? className : ""}`}
       version={isFollowed ? BUTTON_VERSIONS.unfollow : BUTTON_VERSIONS.default}
       onClick={() => mutate()}
     >
-      {isFollowed ? <UserRoundPlus /> : <UserRoundMinus />}
+      {isFollowed ? <UserRoundMinus /> : <UserRoundPlus />}
       <span
         className={`${small ? "text-xs font-normal" : "text-sm font-medium"} w-12`}
       >

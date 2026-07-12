@@ -54,7 +54,7 @@ app.get("/follows", optionalAuthMiddleware, async (c) => {
     .catch(FOLLOW_SCOPE.followers)
     .parse(scope);
 
-  const data = await paginate(
+  const { data: rawData, ...metadata } = await paginate(
     db
       .select({
         user_id: users.user_id,
@@ -62,6 +62,7 @@ app.get("/follows", optionalAuthMiddleware, async (c) => {
         avatar: users.avatar,
         banner: users.banner,
         status: users.status,
+        created_at: sql<number>`${follows.created_at}`.as("created_at"), // for pagination handling (cursor on when user followed)
         followers_count:
           sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id})`.as(
             "followers_count",
@@ -70,13 +71,12 @@ app.get("/follows", optionalAuthMiddleware, async (c) => {
           sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.follower_id} = ${users.user_id})`.as(
             "following_count",
           ),
-        ...(authId &&
-          authId !== processedTargetId && {
-            is_followed:
-              sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id} AND ${follows.follower_id} = ${authId})`.as(
-                "is_followed",
-              ),
-          }),
+        ...(authId && {
+          is_followed:
+            sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followed_id} = ${users.user_id} AND ${follows.follower_id} = ${authId})`.as(
+              "is_followed",
+            ),
+        }),
       })
       .from(users)
       .innerJoin(
@@ -90,16 +90,17 @@ app.get("/follows", optionalAuthMiddleware, async (c) => {
           ? eq(follows.followed_id, processedTargetId)
           : eq(follows.follower_id, processedTargetId),
       )
-      .orderBy(desc(follows.created_at))
+      .orderBy(desc(follows.created_at), desc(users.user_id))
       .$dynamic(),
     {
       cursor,
       perPage: limit,
       idColName: users.user_id.name,
-      sortColName: users.followers_count.name,
+      sortColName: follows.created_at.name,
     },
   );
-  return c.json(dbProfileToGlobalProfileSchema.array().parse(data));
+  const data = dbProfileToGlobalProfileSchema.array().parse(rawData);
+  return c.json({ data, ...metadata });
 });
 
 // /popular -> top 5 users by followers, maybe some algo in future

@@ -13,7 +13,7 @@ export default function TinyProfile({
 }: {
   user: Profile;
   noBanner?: boolean;
-  listKeys: USER_LIST_KEY[];
+  listKeys: (USER_LIST_KEY | string)[][];
 }) {
   return (
     <div className="flex flex-col gap-5">

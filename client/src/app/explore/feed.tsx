@@ -12,9 +12,9 @@ import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
 import PostsContainer from "@/components/post/postsContainer";
 
 export enum STATUS {
-  top = "Top",
-  latest = "Latest",
-  media = "Media",
+  top = "top",
+  latest = "latest",
+  media = "media",
 }
 export default function ExploreFeed() {
   const [status, setStatus] = useState<STATUS>(STATUS.top);
@@ -59,7 +59,6 @@ export default function ExploreFeed() {
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: null as string | null,
     placeholderData: (prev) => prev,
-    staleTime: 10 * 60 * 1000,
     select: (data) => {
       const exist = new Set<string>();
       const filteredPages = data.pages.map((page) => ({
@@ -94,19 +93,19 @@ export default function ExploreFeed() {
             onClick={() => setStatus(STATUS.top)}
             active={status === STATUS.top}
           >
-            {STATUS.top}
+            Top
           </SectionFragment>
           <SectionFragment
             onClick={() => setStatus(STATUS.latest)}
             active={status === STATUS.latest}
           >
-            {STATUS.latest}
+            Latest
           </SectionFragment>
           <SectionFragment
             onClick={() => setStatus(STATUS.media)}
             active={status === STATUS.media}
           >
-            {STATUS.media}
+            Media
           </SectionFragment>
         </aside>
       </div>

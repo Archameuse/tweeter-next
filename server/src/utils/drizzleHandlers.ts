@@ -1,5 +1,6 @@
 import { db } from "@/db/index.js";
 import { users } from "@/db/schema.js";
+import { cursorSchema } from "@/schema.js";
 import { and, count, gt, gte, lt, lte, or, sql, SQL } from "drizzle-orm";
 import { SQLiteColumn, SQLiteSelect } from "drizzle-orm/sqlite-core";
 import z from "zod";
@@ -16,25 +17,7 @@ export const paginationQuerySchema = z.object({
     .min(MIN_PAGE_LIMIT)
     .max(MAX_PAGE_LIMIT)
     .catch(DEFAULT_PAGE_LIMIT),
-  cursor: z
-    .preprocess(
-      (val) => {
-        if (typeof val === "string") {
-          const [sortVal, id] = val.split("|").map(Number);
-          return { sortVal, id };
-        }
-        return val;
-      },
-      z
-        .object({
-          sortVal: z.number().int(),
-          id: z.number().int(),
-        })
-        .nullish()
-        .catch(null),
-    )
-    .nullish()
-    .catch(null),
+  cursor: cursorSchema,
   isAsc: z.coerce.boolean().nullish(),
   sortColName: z.string(),
   idColName: z.string(),
@@ -80,6 +63,7 @@ export const paginate = async <T extends SQLiteSelect>(
     const last =
       data.length >= 2 ? data[data.length - 2] : data[data.length - 1];
     if (last) {
+      // console.log(last, sortColName, idColName);
       if (last.hasOwnProperty(sortColName) && last.hasOwnProperty(idColName)) {
         const sortVal = last[sortColName];
         const idVal = last[idColName];

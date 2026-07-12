@@ -38,7 +38,7 @@ export const users = sqliteTable(
     status: text("status", { mode: "text" }),
     avatar: text("avatar", { mode: "text" }),
     banner: text("banner", { mode: "text" }),
-    followers_count: integer("follows_count", { mode: "number" })
+    followers_count: integer("followers_count", { mode: "number" })
       .notNull()
       .default(0),
     following_count: integer("following_count", { mode: "number" })

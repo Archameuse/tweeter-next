@@ -162,11 +162,11 @@ export default function PostMain({
       }
       if (err instanceof AxiosError) {
         if (err.response?.data?.message) {
-          console.error(err);
           return alert(err.response?.data?.message);
         }
       }
-      return alert("Unknown error");
+      console.error(err);
+      return alert("Unknown action error");
     },
   });
 
@@ -241,7 +241,7 @@ export default function PostMain({
             icon={Repeat2}
             active={tweet.retweeted}
             action={POST_ACTION.retweet}
-            disabled={isPending || tweet.inProgress}
+            disabled={tweet.inProgress}
             onClick={() => handleAction(POST_ACTION.retweet)}
           >
             <span className="hidden sm:block">Retweet</span>
@@ -250,7 +250,7 @@ export default function PostMain({
             icon={Heart}
             active={tweet.liked}
             action={POST_ACTION.like}
-            disabled={isPending || tweet.inProgress}
+            disabled={tweet.inProgress}
             onClick={() => handleAction(POST_ACTION.like)}
           >
             <span className="hidden sm:block">Like</span>
@@ -259,7 +259,7 @@ export default function PostMain({
             icon={Bookmark}
             active={tweet.saved}
             action={POST_ACTION.save}
-            disabled={isPending || tweet.inProgress}
+            disabled={tweet.inProgress}
             onClick={() => handleAction(POST_ACTION.save)}
           >
             <span className="hidden sm:block">Save</span>

@@ -40,7 +40,6 @@ export default function HomeFeed() {
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: null as string | null,
     placeholderData: (prev) => prev,
-    staleTime: 10 * 60 * 1000,
     select: (data) => {
       const exist = new Set<string>();
       const filteredPages = data.pages.map((page) => ({

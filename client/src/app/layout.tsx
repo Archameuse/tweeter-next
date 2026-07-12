@@ -8,6 +8,7 @@ import { Providers } from "@/providers/providers";
 import { getServerCookie } from "@/utils/serverUserHelpers";
 import PostReplyModal from "@/components/post/postReplyModal";
 import PostRepliesModal from "@/components/post/postRepliesModal";
+import FollowsModal from "@/components/modals/followsModal";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -47,6 +48,7 @@ export default async function RootLayout({
           <PostModal />
           <PostReplyModal />
           <PostRepliesModal />
+          <FollowsModal />
         </Providers>
       </body>
     </html>

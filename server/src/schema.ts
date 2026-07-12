@@ -97,3 +97,32 @@ export const dbUserToGlobalUserSchema = dbUserSchema.transform(
     followed: db.is_followed,
   }),
 );
+
+export const dbTimestampSchema = z.preprocess((val) => {
+  if (typeof val === "number" && !Number.isNaN(val)) {
+    return new Date(val * 1000);
+  } else if (typeof val === "string") {
+    return new Date(val);
+  }
+  return new Date();
+}, z.date());
+
+export const cursorSchema = z
+  .preprocess(
+    (val) => {
+      if (typeof val === "string") {
+        const [sortVal, id] = val.split("|").map(Number);
+        return { sortVal, id };
+      }
+      return val;
+    },
+    z
+      .object({
+        sortVal: z.number().int(),
+        id: z.number().int(),
+      })
+      .nullish()
+      .catch(null),
+  )
+  .nullish()
+  .catch(null);

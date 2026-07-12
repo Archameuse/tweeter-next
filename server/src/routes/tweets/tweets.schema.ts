@@ -1,5 +1,6 @@
 import {
   countSchema,
+  dbTimestampSchema,
   hashtagSchema,
   idNumberSchema,
   idSchema,
@@ -40,14 +41,7 @@ export const dbTweetSchema = z.object({
   tweet_id: looseIdSchema,
   content: z.string().catch("Can't get this message's content"),
   image: imageLinkSchema.nullish().catch(null),
-  created_at: z.preprocess((val) => {
-    if (typeof val === "number" && !Number.isNaN(val)) {
-      return new Date(val * 1000);
-    } else if (typeof val === "string") {
-      return new Date(val);
-    }
-    return new Date();
-  }, z.date()),
+  created_at: dbTimestampSchema,
   only_followers: optionalBooleanSchema,
   author: z.object({
     user_id: looseIdSchema,
