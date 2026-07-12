@@ -63,7 +63,6 @@ export const paginate = async <T extends SQLiteSelect>(
     const last =
       data.length >= 2 ? data[data.length - 2] : data[data.length - 1];
     if (last) {
-      // console.log(last, sortColName, idColName);
       if (last.hasOwnProperty(sortColName) && last.hasOwnProperty(idColName)) {
         const sortVal = last[sortColName];
         const idVal = last[idColName];

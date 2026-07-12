@@ -65,6 +65,7 @@ declare global {
     Pick<UserSettings, "status" | "username">
   > {
     password?: string;
+    oldPassword?: string;
     email?: string;
     avatar?: File | null;
     banner?: File | null;

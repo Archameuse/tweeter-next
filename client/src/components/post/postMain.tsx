@@ -95,7 +95,7 @@ export default function PostMain({
   );
 
   const queryClient = useQueryClient();
-  const { mutate, isPending } = useMutation({
+  const { mutate } = useMutation({
     mutationFn: async (action: POST_ACTION) => {
       const res = await axios<TweetActionResponse>(
         `${API_URL}/tweets/${action}/${tweet.id}`,

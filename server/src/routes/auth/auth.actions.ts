@@ -16,6 +16,7 @@ import {
 } from "./auth.schema.js";
 import { dbUserToGlobalUserSchema } from "@/schema.js";
 import { eq, sql } from "drizzle-orm";
+import { hashPw, verifyPw } from "@/utils/passwordHandlers.js";
 
 const app = new Hono();
 
@@ -43,7 +44,7 @@ app.post("/create", async (c) => {
         message: `Username "${username.toLowerCase()}" is already exists.`,
       });
     }
-    const hashedPassword = password; //ignore for now, later implement some actual hashing
+    const hashedPassword = await hashPw(password);
     const [newUser] = await tx
       .insert(users)
       .values({
@@ -77,8 +78,7 @@ app.post("/login", async (c) => {
       email_guard: email.toLowerCase(),
     },
   });
-  // confirm user exists + compares password for now just basic equation later would implement hash validation
-  if (!res || res.password !== password) {
+  if (!res || !(await verifyPw(password, res.password))) {
     throw new HTTPException(401, { message: "Invalid email or password" });
   }
   const { password: _, ...user } = res;
@@ -105,8 +105,7 @@ app.post("/delete", authMiddleware, async (c) => {
     })
   )?.password;
   if (!actualPassword) throw new User404Error(userId);
-  //compare hash but for now just raw comparison
-  if (password !== actualPassword)
+  if (!(await verifyPw(password, actualPassword)))
     throw new HTTPException(409, { message: "Wrong password" });
   await clearSessionsByUID(userId);
   await deleteSession({ c });

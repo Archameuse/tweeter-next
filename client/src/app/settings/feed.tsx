@@ -205,7 +205,10 @@ export default function SettingsFeed({
         return alert(
           "Make sure your confirm password is the same as actual password",
         );
+      const oldPassword = prompt("Enter your old password");
+      if (!oldPassword) return alert("Your old password can't be empty");
       settings.password = formPassword;
+      settings.oldPassword = oldPassword;
     }
     if (Object.keys(settings).length)
       formData.append("settings", JSON.stringify(settings));

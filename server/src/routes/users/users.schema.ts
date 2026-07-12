@@ -77,6 +77,7 @@ export const globalUserSettingsSchema = z.preprocess(
   z.object({
     username: usernameSchema.optional(),
     password: passwordSchema.optional(),
+    oldPassword: passwordSchema.optional(),
     email: emailSchema.optional(),
     avatar: optionalNullSchema,
     banner: optionalNullSchema,
@@ -85,13 +86,13 @@ export const globalUserSettingsSchema = z.preprocess(
 );
 
 export const globalUserSettingsToDbSettingsSchema =
-  globalUserSettingsSchema.transform((db) => ({
-    username: db.username,
-    status: db.status,
-    password: db.password,
-    email: db.email,
-    avatar: imageLinkSchema.nullish().parse(db.avatar),
-    banner: imageLinkSchema.nullish().parse(db.banner),
+  globalUserSettingsSchema.transform((input) => ({
+    username: input.username,
+    status: input.status,
+    password: input.password,
+    email: input.email,
+    avatar: imageLinkSchema.nullish().parse(input.avatar),
+    banner: imageLinkSchema.nullish().parse(input.banner),
   }));
 
 export const followExistQuerySchema = z.object({
@@ -100,3 +101,6 @@ export const followExistQuerySchema = z.object({
 });
 
 export type FollowExistQueryType = z.infer<typeof followExistQuerySchema>;
+export type GlobalUserSettingsToDbSettingsType = z.infer<
+  typeof globalUserSettingsToDbSettingsSchema
+>;
