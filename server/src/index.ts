@@ -50,14 +50,6 @@ app.onError((err, c) => {
 app.route("/users", userRoutes);
 app.route("/tweets", tweetsRoutes);
 app.route("/auth", authRoutes);
-app.get("/testPw", async (c) => {
-  // const pw = "testPassword";
-  const { pw } = c.req.query();
-  if (!pw) return c.body("null");
-  const result = await hashPw(pw);
-  // const result = await verifyPw(pw, hash);
-  return c.body(result);
-});
 
 serve(
   {
