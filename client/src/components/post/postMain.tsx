@@ -20,7 +20,7 @@ import {
 } from "@tanstack/react-query";
 import axios, { AxiosError } from "axios";
 import { API_URL } from "@/utils/userHelpers";
-import { useModalStore } from "../../../store/useModalStore";
+import { useModalStore } from "@/store/useModalStore";
 
 export enum TWEET_LIST_KEY {
   explore = "exploreTweets",

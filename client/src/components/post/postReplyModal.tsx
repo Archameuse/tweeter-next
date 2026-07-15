@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import ModalMain from "../ui/mainModal";
-import { useModalStore } from "../../../store/useModalStore";
+import { useModalStore } from "@/store/useModalStore";
 import TweetInput from "../TweetInput";
 
 export default function PostReplyModal() {

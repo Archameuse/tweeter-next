@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ModalMain from "../ui/mainModal";
 import ImageWrapper from "../ui/imageWrapper";
-import { useModalStore } from "../../../store/useModalStore";
+import { useModalStore } from "@/store/useModalStore";
 
 export default function PostModal() {
   const modalRef = useRef<HTMLDialogElement>(null);

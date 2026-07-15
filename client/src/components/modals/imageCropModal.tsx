@@ -5,6 +5,7 @@ import { ImageUploadContent } from "./imageUploadModal";
 import validateImage from "@/utils/validateImage";
 import Cropper, { Area, Point } from "react-easy-crop";
 import ImageWrapper from "../ui/imageWrapper";
+import { ActionButton, BUTTON_VERSIONS } from "../ui/actionButton";
 
 export default function ImageCropModal({
   isOpen,
@@ -77,7 +78,12 @@ export default function ImageCropModal({
     else modalRef.current.close();
   }, [isOpen]);
   return (
-    <ModalMain onClose={onClose} ref={modalRef} headline="Upload image">
+    <ModalMain
+      onClose={onClose}
+      ref={modalRef}
+      headline="Upload image"
+      noScroll
+    >
       {!cropImage ? (
         <ImageUploadContent onSelect={handleSelectImage} />
       ) : (
@@ -93,31 +99,27 @@ export default function ImageCropModal({
               zoom={zoom}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
-              objectFit="cover"
+              objectFit="contain"
             />
             <ImageWrapper
               src={cropImage}
               fill={false}
               width={0}
               height={0}
-              className="w-full invisible"
+              className="w-full invisible max-h-[75vh]"
             />
           </div>
           <div className="pb-4 w-full flex justify-between px-8">
-            <button
+            <ActionButton
               type="button"
               onClick={discardCrop}
-              className="inline-block rounded bg-primaryBlue px-6 py-2 text-xs font-medium uppercase leading-normal text-white shadow-sm transition duration-150 ease-in-out hover:bg-secondaryBlue hover:shadow-md focus:bg-primary-accent-300 focus:shadow-primary-2 focus:outline-none focus:ring-0 active:opacity-80 active:shadow-sm active:transition-none"
+              version={BUTTON_VERSIONS.discard}
             >
               Discard
-            </button>
-            <button
-              type="button"
-              onClick={handleCropImage}
-              className="inline-block rounded bg-primaryBlue px-6 py-2 text-xs font-medium uppercase leading-normal text-white shadow-sm transition duration-150 ease-in-out hover:bg-secondaryBlue hover:shadow-md focus:bg-primary-accent-300 focus:shadow-primary-2 focus:outline-none focus:ring-0 active:opacity-80 active:shadow-sm active:transition-none"
-            >
+            </ActionButton>
+            <ActionButton type="button" onClick={handleCropImage}>
               Accept
-            </button>
+            </ActionButton>
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import ModalMain from "../ui/mainModal";
-import { useModalStore } from "../../../store/useModalStore";
+import { useModalStore } from "@/store/useModalStore";
 import { USER_LIST_KEY } from "../user/followButton";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import axios, { AxiosError } from "axios";

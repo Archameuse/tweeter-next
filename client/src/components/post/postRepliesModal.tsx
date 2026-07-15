@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import ModalMain from "../ui/mainModal";
-import { useModalStore } from "../../../store/useModalStore";
+import { useModalStore } from "@/store/useModalStore";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { TWEET_LIST_KEY } from "./postMain";
 import axios, { AxiosError } from "axios";

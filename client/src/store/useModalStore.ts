@@ -21,7 +21,7 @@ interface RepliesData {
 }
 
 /**
- * isFollowId - if True fetch followers of this user, if False fetch users this user follows
+ * isFollowId - if True fetch followers of this user, if False fetch users this user follows (literally is userId - id of the followed user)
  */
 interface FollowsData {
   userId: string;

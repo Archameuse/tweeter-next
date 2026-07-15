@@ -1,4 +1,4 @@
-Simple social network website, clone of legacy devchallenges.io challenge.
+Simple social network website, implementation of legacy devchallenges.io challenge.
 Link: ---
 
 temporary:

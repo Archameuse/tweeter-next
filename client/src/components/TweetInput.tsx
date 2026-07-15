@@ -25,7 +25,7 @@ import axios, { AxiosError } from "axios";
 import { API_URL } from "@/utils/userHelpers";
 import { ImageLoadbar } from "@/app/settings/feed";
 import { TWEET_LIST_KEY } from "./post/postMain";
-import { useModalStore } from "../../store/useModalStore";
+import { useModalStore } from "@/store/useModalStore";
 
 const MAX_IMAGE_SIZE = 1024 * 1024 * 40; //bytes
 

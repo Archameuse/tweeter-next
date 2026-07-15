@@ -10,6 +10,7 @@ import axios, { AxiosError } from "axios";
 import { API_URL } from "@/utils/userHelpers";
 import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
 import PostsContainer from "@/components/post/postsContainer";
+import { ActionButton } from "@/components/ui/actionButton";
 
 export enum STATUS {
   top = "top",
@@ -128,12 +129,12 @@ export default function ExploreFeed() {
               className="block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               placeholder="Search..."
             />
-            <button
+            <ActionButton
               type="submit"
-              className="text-white absolute cursor-pointer inset-e-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm px-4 py-2 active:opacity-80"
+              className="absolute inset-e-2.5 bottom-2.5"
             >
               Search
-            </button>
+            </ActionButton>
           </div>
         </form>
         <PostsContainer

@@ -44,7 +44,7 @@ function Trend({
   return (
     <div className="w-full flex flex-col gap-2 justify-between font-noto-sans text-left">
       <span className="text-base font-semibold">#{children}</span>
-      <span v-if="tweets" className="text-primaryGray text-xs">
+      <span className="text-primaryGray text-xs">
         {formattedTweets + " Tweets"}
       </span>
     </div>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import ImageWrapper from "../ui/imageWrapper";
-import { useModalStore } from "../../../store/useModalStore";
+import { useModalStore } from "@/store/useModalStore";
 
 export default function PostImage({ src }: { src: string }) {
   const video = useRef<HTMLVideoElement>(null);

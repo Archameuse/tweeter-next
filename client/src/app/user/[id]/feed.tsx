@@ -13,6 +13,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import axios, { AxiosError } from "axios";
 import { useEffect, useRef, useState } from "react";
 
+// should correspond to backend filters
 enum STATUS {
   tweets = "tweets",
   replies = "replies",

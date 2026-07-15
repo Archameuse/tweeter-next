@@ -4,7 +4,7 @@ import ImageWrapper from "../ui/imageWrapper";
 import FollowButton, { USER_LIST_KEY } from "./followButton";
 import { useMemo } from "react";
 import symbolFormatter from "@/utils/symbolFormatter";
-import { useModalStore } from "../../../store/useModalStore";
+import { useModalStore } from "@/store/useModalStore";
 
 export default function ProfileTab({ profile }: { profile: Profile }) {
   const setData = useModalStore((state) => state.setFollowsData);

@@ -9,14 +9,10 @@ export default function symbolFormatter(num?: number, digits: number = 1) {
     { value: 1e15, symbol: "P" },
     { value: 1e18, symbol: "E" },
   ];
-  const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
-  const item = lookup
-    .slice()
-    .reverse()
-    .find(function (item) {
-      return num >= item.value;
-    });
+  const item = [...lookup].reverse().find((item) => num >= item.value);
   return item
-    ? (num / item.value).toFixed(digits).replace(rx, "$1") + item.symbol
+    ? (num / item.value)
+        .toFixed(digits)
+        .replace(/\.0+$|(\.[0-9]*[1-9])0+$/, "$1") + item.symbol
     : "0";
 }

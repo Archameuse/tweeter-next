@@ -21,7 +21,7 @@ import {
   tweetExistsAndActionQuerySchema,
 } from "./tweets.schema.js";
 import { HTTPException } from "hono/http-exception";
-import uploadImage from "@/utils/uploadImage.js";
+import uploadImage, { UPLOAD_IMAGE_SCOPE } from "@/utils/uploadImage.js";
 import { idNumberSchema, imageSchema } from "@/schema.js";
 import { ActionNoReturnError, Tweet404Error } from "@/utils/standardErrors.js";
 import { authMiddleware } from "@/middleware/auth.middleware.js";
@@ -297,111 +297,128 @@ app.post("/", authMiddleware, async (c) => {
   const userId = c.get("userId");
   const tweetData = globalTweetToDbTweetSchema(userId).parse(rawTweetData);
   const imageFile = imageSchema.parse(formData.get("image"));
-  if (imageFile) tweetData.image = await uploadImage(imageFile);
-  const response = await db.transaction(async (tx) => {
-    const tweetAuthor = await tx.query.users.findFirst({
-      columns: {
-        user_id: true,
-        avatar: true,
-        username: true,
-      },
-      where: { user_id: tweetData.user_id },
-      extras: { is_followed: sql<false>`FALSE` },
-    });
-    if (!tweetAuthor) {
-      throw new HTTPException(404, {
-        message: `User with id #${tweetData.user_id} that tries to create a tweet can't be found in database`,
-      });
-    }
-    let hashtagId: number | undefined;
-    let replyTweetData;
-    let newRepliesAmount: number | undefined;
-    // if we have replyTo -> check that such tweet exists or 404
-    if (tweetData.reply_to) {
-      replyTweetData = await tx.query.tweets.findFirst({
-        columns: { tweet_id: true },
-        with: {
-          author: { columns: { username: true } },
+  let onUploadError;
+  if (imageFile) {
+    const { route, onError } = await uploadImage(
+      imageFile,
+      UPLOAD_IMAGE_SCOPE.tweet,
+    );
+    tweetData.image = route;
+    onUploadError = onError;
+  }
+  try {
+    const response = await db.transaction(async (tx) => {
+      const tweetAuthor = await tx.query.users.findFirst({
+        columns: {
+          user_id: true,
+          avatar: true,
+          username: true,
         },
-        where: { tweet_id: tweetData.reply_to },
+        where: { user_id: tweetData.user_id },
+        extras: { is_followed: sql<false>`FALSE` },
       });
-
-      if (!replyTweetData) {
-        throw new Tweet404Error(404, true);
-      }
-      const [newRepliesResponse] = await tx
-        .update(tweets)
-        .set({
-          replies_count: sql<number>`${tweets.replies_count} + 1`,
-        })
-        .where(eq(tweets.tweet_id, tweetData.reply_to))
-        .returning({ newRepliesAmount: tweets.replies_count });
-      if (!newRepliesResponse) throw new ActionNoReturnError("Reply");
-      newRepliesAmount = newRepliesResponse.newRepliesAmount;
-    }
-    // try to create tweet with data we have, return its id
-    const [insertedTweet] = await tx
-      .insert(tweets)
-      .values(tweetData)
-      .returning();
-
-    if (!insertedTweet) {
-      throw new HTTPException(500, {
-        message:
-          "Tweet was inserted inside transaction but for whatever reason nothing was returned, realistically this should never happen but typescript need this validation",
-      });
-    }
-
-    // if we have hashtag -> try to insert it with upset -> try to return its id
-    if (hashtag) {
-      hashtagId = (
-        await tx
-          .insert(hashtags)
-          .values({
-            hashtag,
-          })
-          .onConflictDoUpdate({
-            target: hashtags.hashtag_guard,
-            set: { hashtag: sql.raw(`excluded.${hashtags.hashtag.name}`) },
-          })
-          .returning({ hashtag_id: hashtags.hashtag_id })
-      )[0]?.hashtag_id;
-      // if we have don't have hashtag id throw an error
-      if (!hashtagId) {
-        throw new HTTPException(500, {
-          message:
-            "For some reason hashtag was not inserted, remove hashtag or change it and try again",
+      if (!tweetAuthor) {
+        throw new HTTPException(404, {
+          message: `User with id #${tweetData.user_id} that tries to create a tweet can't be found in database`,
         });
       }
-      // insert tweets_hashtags hashtag id and created tweet id
-      await tx
-        .insert(tweets_hashtags)
-        .values({ tweet_id: insertedTweet.tweet_id, hashtag_id: hashtagId });
-      // update hashtag id tweets count + 1
-      await tx
-        .update(hashtags)
-        .set({
-          tweets_count: sql<number>`${hashtags.tweets_count} + 1`,
-        })
-        .where(eq(hashtags.hashtag_id, hashtagId));
-    }
+      let hashtagId: number | undefined;
+      let replyTweetData;
+      let newRepliesAmount: number | undefined;
+      // if we have replyTo -> check that such tweet exists or 404
+      if (tweetData.reply_to) {
+        replyTweetData = await tx.query.tweets.findFirst({
+          columns: { tweet_id: true },
+          with: {
+            author: { columns: { username: true } },
+          },
+          where: { tweet_id: tweetData.reply_to },
+        });
 
-    const parsedResponse: TweetResponse = {
-      tweet: dbTweetToGlobalTweetSchema.parse({
-        ...insertedTweet,
-        author: tweetAuthor,
-        reply_to_author: replyTweetData && {
-          tweet_id: replyTweetData.tweet_id,
-          username: replyTweetData.author.username,
-        },
-        hashtag,
-        reply_allowed: true,
-      }),
-      newRepliesAmount,
-    };
-    return parsedResponse;
-  });
-  return c.json(response, 201);
+        if (!replyTweetData) {
+          throw new Tweet404Error(404, true);
+        }
+        const [newRepliesResponse] = await tx
+          .update(tweets)
+          .set({
+            replies_count: sql<number>`${tweets.replies_count} + 1`,
+          })
+          .where(eq(tweets.tweet_id, tweetData.reply_to))
+          .returning({ newRepliesAmount: tweets.replies_count });
+        if (!newRepliesResponse) throw new ActionNoReturnError("Reply");
+        newRepliesAmount = newRepliesResponse.newRepliesAmount;
+      }
+      // try to create tweet with data we have, return its id
+      const [insertedTweet] = await tx
+        .insert(tweets)
+        .values(tweetData)
+        .returning();
+
+      if (!insertedTweet) {
+        throw new HTTPException(500, {
+          message:
+            "Tweet was inserted inside transaction but for whatever reason nothing was returned, realistically this should never happen but typescript need this validation",
+        });
+      }
+
+      // if we have hashtag -> try to insert it with upset -> try to return its id
+      if (hashtag) {
+        hashtagId = (
+          await tx
+            .insert(hashtags)
+            .values({
+              hashtag,
+            })
+            .onConflictDoUpdate({
+              target: hashtags.hashtag_guard,
+              set: { hashtag: sql.raw(`excluded.${hashtags.hashtag.name}`) },
+            })
+            .returning({ hashtag_id: hashtags.hashtag_id })
+        )[0]?.hashtag_id;
+        // if we have don't have hashtag id throw an error
+        if (!hashtagId) {
+          throw new HTTPException(500, {
+            message:
+              "For some reason hashtag was not inserted, remove hashtag or change it and try again",
+          });
+        }
+        // insert tweets_hashtags hashtag id and created tweet id
+        await tx
+          .insert(tweets_hashtags)
+          .values({ tweet_id: insertedTweet.tweet_id, hashtag_id: hashtagId });
+        // update hashtag id tweets count + 1
+        await tx
+          .update(hashtags)
+          .set({
+            tweets_count: sql<number>`${hashtags.tweets_count} + 1`,
+          })
+          .where(eq(hashtags.hashtag_id, hashtagId));
+      }
+
+      const parsedResponse: TweetResponse = {
+        tweet: dbTweetToGlobalTweetSchema.parse({
+          ...insertedTweet,
+          author: tweetAuthor,
+          reply_to_author: replyTweetData && {
+            tweet_id: replyTweetData.tweet_id,
+            username: replyTweetData.author.username,
+          },
+          hashtag,
+          reply_allowed: true,
+        }),
+        newRepliesAmount,
+      };
+      return parsedResponse;
+    });
+    return c.json(response, 201);
+  } catch (error) {
+    try {
+      if (onUploadError) await onUploadError();
+    } catch {
+      console.error("Can't cleanup orphaned file for tweet upload");
+    }
+    throw error;
+  }
 });
 
 export default app;

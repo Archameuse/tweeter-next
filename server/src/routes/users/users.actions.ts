@@ -14,7 +14,7 @@ import {
   globalUserSettingsToDbSettingsSchema,
   GlobalUserSettingsToDbSettingsType,
 } from "./users.schema.js";
-import uploadImage from "@/utils/uploadImage.js";
+import uploadImage, { UPLOAD_IMAGE_SCOPE } from "@/utils/uploadImage.js";
 import { authMiddleware } from "@/middleware/auth.middleware.js";
 import { clearSessionsByUID, createSession } from "@/utils/sessionsHandlers.js";
 import { hashPw, verifyPw } from "@/utils/passwordHandlers.js";
@@ -155,84 +155,110 @@ app.put("/settings", authMiddleware, async (c) => {
   const filteredSettingsQuery: Partial<GlobalUserSettingsToDbSettingsType> = {};
   const avatarImage = imageSchema.parse(formData.get("avatar"));
   const bannerImage = imageSchema.parse(formData.get("banner"));
+  let onAvatarError, onBannerError;
 
   if (avatarImage) {
+    const { route, onError } = await uploadImage(
+      avatarImage,
+      UPLOAD_IMAGE_SCOPE.avatar,
+    );
     //set avatar
-    filteredSettingsQuery.avatar = await uploadImage(avatarImage);
+    filteredSettingsQuery.avatar = route;
+    onAvatarError = onError;
   } else if (avatarImage === null) {
     filteredSettingsQuery.avatar = null;
   }
   if (bannerImage) {
+    const { route, onError } = await uploadImage(
+      bannerImage,
+      UPLOAD_IMAGE_SCOPE.avatar,
+    );
     //set banner
-    filteredSettingsQuery.banner = await uploadImage(bannerImage);
+    filteredSettingsQuery.banner = route;
+    onBannerError = onError;
   } else if (bannerImage === null) {
     filteredSettingsQuery.banner = null;
   }
-  if (updateSettingsQuery.username || updateSettingsQuery.email) {
-    const [exists] = await db
-      .select({
-        ...(updateSettingsQuery.username && {
-          username_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.username_guard} = ${updateSettingsQuery.username.toLowerCase()} AND ${users.user_id} != ${authId})`,
-        }),
-        ...(updateSettingsQuery.email && {
-          email_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.email_guard} = ${updateSettingsQuery.email.toLowerCase()} AND ${users.user_id} != ${authId})`,
-        }),
-      })
-      .from(users)
-      .limit(1);
-    if (exists) {
-      if (exists.email_taken)
-        throw new HTTPException(409, { message: "This email is taken" });
-      if (exists.username_taken)
-        throw new HTTPException(409, { message: "This username is taken" });
-      if (updateSettingsQuery.username)
-        filteredSettingsQuery.username = updateSettingsQuery.username; //set username
-      if (updateSettingsQuery.email)
-        filteredSettingsQuery.email = updateSettingsQuery.email; //set email
-    }
-  }
-  if (updateSettingsQuery.status || updateSettingsQuery.status === null)
-    filteredSettingsQuery.status = updateSettingsQuery.status; //set status
-  if (updateSettingsQuery.password) {
-    if (!updateSettingsQuery.oldPassword)
-      throw new HTTPException(400, { message: "No old password provided" });
-    const currentPw = (
-      await db.query.users.findFirst({
-        columns: { password: true },
-        where: { user_id: authId },
-      })
-    )?.password;
-    if (!currentPw)
-      throw new HTTPException(500, {
-        message:
-          "For some reason can't get currently logged in user's password, unable to proceed",
-      });
-    if (!(await verifyPw(updateSettingsQuery.oldPassword, currentPw)))
-      throw new HTTPException(400, { message: "Wrong old password provided" });
-    filteredSettingsQuery.password = await hashPw(updateSettingsQuery.password); // set password
-  }
-  if (Object.keys(updateSettingsQuery).length < 1)
-    throw new HTTPException(409, { message: "Empty request" });
 
-  const [res] = await db
-    .update(users)
-    .set(filteredSettingsQuery)
-    .where(eq(users.user_id, authId))
-    .returning({
-      user_id: users.user_id,
-      username: users.username,
-      email: users.email,
-      avatar: users.avatar,
-      banner: users.banner,
-      status: users.status,
-    });
-  if (!res) throw new User404Error(authId);
-  // invalidating sessions since password is changed
-  if (filteredSettingsQuery.password) {
-    await clearSessionsByUID(authId);
-    await createSession({ userId: authId, c, skipDeletion: true });
+  try {
+    if (updateSettingsQuery.username || updateSettingsQuery.email) {
+      const [exists] = await db
+        .select({
+          ...(updateSettingsQuery.username && {
+            username_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.username_guard} = ${updateSettingsQuery.username.toLowerCase()} AND ${users.user_id} != ${authId})`,
+          }),
+          ...(updateSettingsQuery.email && {
+            email_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.email_guard} = ${updateSettingsQuery.email.toLowerCase()} AND ${users.user_id} != ${authId})`,
+          }),
+        })
+        .from(users)
+        .limit(1);
+      if (exists) {
+        if (exists.email_taken)
+          throw new HTTPException(409, { message: "This email is taken" });
+        if (exists.username_taken)
+          throw new HTTPException(409, { message: "This username is taken" });
+        if (updateSettingsQuery.username)
+          filteredSettingsQuery.username = updateSettingsQuery.username; //set username
+        if (updateSettingsQuery.email)
+          filteredSettingsQuery.email = updateSettingsQuery.email; //set email
+      }
+    }
+    if (updateSettingsQuery.status || updateSettingsQuery.status === null)
+      filteredSettingsQuery.status = updateSettingsQuery.status; //set status
+    if (updateSettingsQuery.password) {
+      if (!updateSettingsQuery.oldPassword)
+        throw new HTTPException(400, { message: "No old password provided" });
+      const currentPw = (
+        await db.query.users.findFirst({
+          columns: { password: true },
+          where: { user_id: authId },
+        })
+      )?.password;
+      if (!currentPw)
+        throw new HTTPException(500, {
+          message:
+            "For some reason can't get currently logged in user's password, unable to proceed",
+        });
+      if (!(await verifyPw(updateSettingsQuery.oldPassword, currentPw)))
+        throw new HTTPException(400, {
+          message: "Wrong old password provided",
+        });
+      filteredSettingsQuery.password = await hashPw(
+        updateSettingsQuery.password,
+      ); // set password
+    }
+    if (Object.keys(filteredSettingsQuery).length < 1)
+      throw new HTTPException(409, { message: "Empty request" });
+
+    const [res] = await db
+      .update(users)
+      .set(filteredSettingsQuery)
+      .where(eq(users.user_id, authId))
+      .returning({
+        user_id: users.user_id,
+        username: users.username,
+        email: users.email,
+        avatar: users.avatar,
+        banner: users.banner,
+        status: users.status,
+      });
+    if (!res) throw new User404Error(authId);
+    // invalidating sessions since password is changed
+    if (filteredSettingsQuery.password) {
+      await clearSessionsByUID(authId);
+      await createSession({ userId: authId, c, skipDeletion: true });
+    }
+    return c.json(dbUserSettingsToGlobalUserSettingsSchema.parse(res), 201);
+  } catch (error) {
+    try {
+      if (onAvatarError) await onAvatarError();
+      if (onBannerError) await onBannerError();
+    } catch {
+      console.error("Error cleaning orphaned files");
+    }
+    throw error;
   }
-  return c.json(dbUserSettingsToGlobalUserSettingsSchema.parse(res), 201);
 });
 
 export default app;

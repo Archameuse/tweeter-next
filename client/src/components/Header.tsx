@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, Moon, Sun } from "lucide-react";
+import { ChevronDown, Menu, Moon, Sun } from "lucide-react";
 import { useTheme } from "@teispace/next-themes";
 import Image from "next/image";
 import Link, { LinkProps } from "next/link";
@@ -9,6 +9,7 @@ import { usePathname } from "next/navigation";
 import { UserAvatar } from "./ui/userAvatar";
 import { ActionButton } from "./ui/actionButton";
 import { useUser } from "@/providers/UserProvider";
+import getUsername from "@/utils/getUsername";
 
 export function Header() {
   const [expanded, setExpanded] = useState(false);
@@ -20,6 +21,7 @@ export function Header() {
   const isHome = route === "/";
   const isExplore = route === "/explore";
   const isBookmarks = route === "/bookmarks";
+  const isSettings = route === "/settings";
 
   const signOut = async () => {
     await logout();
@@ -87,22 +89,24 @@ export function Header() {
         )}
       </ul>
       <div className="min-w-32 h-full flex items-center justify-center relative group">
-        {user && <HeaderProfile user={user} />}
         {user ? (
-          <div className="absolute z-30 top-full w-full h-0 overflow-clip group-hover:h-20 flex flex-col bg-white dark:bg-primaryBlack transition-[height]">
-            <button
-              onClick={async () => await signOut()}
-              className="h-full w-full cursor-pointer dark:text-white hover:bg-[#E2E7E9] dark:hover:bg-[#898c8d] active:bg-[#c0c5c7] dark:active:bg-[#5a5b5c]"
-            >
-              Sign-out
-            </button>
-            <Link
-              href="/settings"
-              className="h-full w-full text-center flex items-center justify-center dark:text-white hover:bg-[#E2E7E9] dark:hover:bg-[#898c8d] active:bg-[#c0c5c7] dark:active:bg-[#5a5b5c]"
-            >
-              Settings
-            </Link>
-          </div>
+          <>
+            <HeaderProfile user={user} />
+            <div className="absolute z-30 top-full w-full h-0 overflow-clip group-hover:h-20 flex flex-col bg-white dark:bg-primaryBlack transition-[height]">
+              <button
+                onClick={signOut}
+                className="h-full w-full cursor-pointer dark:text-white hover:bg-[#E2E7E9] dark:hover:bg-[#898c8d] active:bg-[#c0c5c7] dark:active:bg-[#5a5b5c]"
+              >
+                Sign-out
+              </button>
+              <Link
+                href="/settings"
+                className="h-full w-full text-center flex items-center justify-center dark:text-white hover:bg-[#E2E7E9] dark:hover:bg-[#898c8d] active:bg-[#c0c5c7] dark:active:bg-[#5a5b5c]"
+              >
+                Settings
+              </Link>
+            </div>
+          </>
         ) : (
           <Link href="/auth">
             <ActionButton>Login</ActionButton>
@@ -152,6 +156,15 @@ export function Header() {
                   Bookmarks
                 </Link>
               </HeaderLiButton>
+              <HeaderLiButton active={isSettings}>
+                <Link
+                  className="w-full h-full flex items-center"
+                  href="/settings"
+                >
+                  Settings
+                </Link>
+              </HeaderLiButton>
+              <HeaderLiButton onClick={signOut}>Sign-out</HeaderLiButton>
             </>
           )}
           <HeaderLiButton
@@ -195,12 +208,10 @@ function HeaderProfile({ user }: { user: User }) {
       <div className="h-8 w-8">
         <UserAvatar src={user.avatar} size={64} />
       </div>
-      <span
-        v-if="user"
-        className="text-xs dark:text-white max-w-48 text-ellipsis overflow-hidden font-bold whitespace-nowrap"
-      >
-        {user.username}
+      <span className="text-xs dark:text-white max-w-48 text-ellipsis overflow-hidden font-bold whitespace-nowrap">
+        {getUsername(user)}
       </span>
+      <ChevronDown className="opacity-80" />
     </div>
   );
 }
