@@ -1,9 +1,11 @@
 Simple social network website, implementation of legacy devchallenges.io challenge.
+Frontend - NextJS
+Backend - Node+Hono
+Storage - Turso as a database and Google Drive as an image storage.
 Link: ---
 
-temporary:
-1 - 1
-3 - 1
-4 - createPassword
-5 - createPassword2
-6 - 123
+some users to sign in as (login -> pw):
+1@1 -> 1
+2@2 -> 2
+
+P.S. account creation does not require email confirmation so just use whatever, you can delete account afterwards if you want
