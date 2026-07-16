@@ -98,6 +98,15 @@ app.post("/delete", authMiddleware, async (c) => {
   const body = await c.req.json();
   const { password } = deleteUserSchema.parse(body);
   const userId = c.get("userId");
+  const isFixed = await db.query.users.findFirst({
+    columns: { fixed_user: true },
+    where: { user_id: userId },
+  });
+  if (isFixed?.fixed_user)
+    throw new HTTPException(400, {
+      message:
+        "This user exists for testing purposes hence its fixed, meaning its impossible delete it via API calls, create new one.",
+    });
   const actualPassword = (
     await db.query.users.findFirst({
       columns: { password: true },
