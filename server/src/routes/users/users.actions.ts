@@ -146,6 +146,15 @@ app.delete("/follow/:id{\\d+}", authMiddleware, async (c) => {
 app.put("/settings", authMiddleware, async (c) => {
   const authId = c.get("userId");
   const formData = await c.req.formData();
+  const isFixed = await db.query.users.findFirst({
+    columns: { fixed_user: true },
+    where: { user_id: authId },
+  });
+  if (isFixed?.fixed_user)
+    throw new HTTPException(400, {
+      message:
+        "This user exists for testing purposes hence its fixed, meaning its impossible to change its settings via API calls, create new one.",
+    });
   // const updateSettingsData = globalUserSettingsToDbSettingsSchema.parse(
   //   formData.get("settings"),
   // );

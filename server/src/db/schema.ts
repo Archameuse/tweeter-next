@@ -44,6 +44,7 @@ export const users = sqliteTable(
     following_count: integer("following_count", { mode: "number" })
       .notNull()
       .default(0),
+    fixed_user: integer("fixed_user", { mode: "boolean" }).default(false),
     created_at: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),

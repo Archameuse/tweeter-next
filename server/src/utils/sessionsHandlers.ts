@@ -8,13 +8,12 @@ import { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { UnauthenticatedError } from "./standardErrors.js";
 import { getConnInfo } from "@hono/node-server/conninfo";
-import Bowser, { getParser } from "bowser";
 
 export const COOKIE_NAME = process.env.SESSION_NAME ?? "session_id";
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production" ? true : false,
+  secure: true,
   sameSite: "Lax",
   path: "/",
 } as const;

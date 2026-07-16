@@ -35,7 +35,7 @@ export default function PostModal() {
         <div className="min-h-0 overflow-hidden flex items-center justify-center">
           {!data.isVideo ? (
             <ImageWrapper
-              src={data.src || "/temp/ (2).jpg"}
+              src={data.src}
               className={`w-full h-auto ${mediaReady ? "opacity-100" : "opacity-0"} transition-opacity duration-500`}
               aria-hidden="true"
               role="presentation"

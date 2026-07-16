@@ -13,7 +13,6 @@ export default async function uploadImage(
   image: File,
   scope: UPLOAD_IMAGE_SCOPE,
 ): Promise<{ route: string; onError: () => Promise<void> }> {
-  // return "/tempUploads/04b211f9-3922-4979-8a67-fdcbe6efda43.webp";
   // const timeStart = performance.now();
   const buffer = Buffer.from(await image.arrayBuffer());
   const webpBuffer = await sharp(buffer, { animated: true })

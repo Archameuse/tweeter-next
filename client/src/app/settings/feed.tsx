@@ -92,7 +92,7 @@ export default function SettingsFeed({
       if (err instanceof AxiosError) {
         const errorMessage = err.response?.data.message;
         if (typeof errorMessage === "string") {
-          if (errorMessage.length < 60) alert(errorMessage);
+          alert(errorMessage);
           return console.error(err.response?.data);
         }
       }

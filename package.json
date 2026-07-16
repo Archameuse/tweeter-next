@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test:client": "pnpm --filter client lint",
+    "test:client": "pnpm --filter client test",
     "dev": "pnpm --filter \"*\" dev",
     "dev:client": "pnpm --filter client dev",
     "dev:server": "pnpm --filter server dev",

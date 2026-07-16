@@ -3,7 +3,7 @@ import { ThemeProvider } from "@teispace/next-themes";
 import { UserProvider } from "@/providers/UserProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+// import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 export function Providers({
   children,
@@ -28,7 +28,7 @@ export function Providers({
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <UserProvider initialUser={initialUser}>
-          <ReactQueryDevtools initialIsOpen={false} />
+          {/* <ReactQueryDevtools initialIsOpen={false} /> */}
           {children}
         </UserProvider>
       </QueryClientProvider>

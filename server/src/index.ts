@@ -1,11 +1,11 @@
 // import { Database } from "@tursodatabase/database";
-// import "dotenv/config";
 // import { drizzle } from "drizzle-orm/tursodatabase/database";
 // if (!process.env.DB_FILE_NAME) throw new Error("No DB FILE FOUND IN .env");
 
 // const client = new Database(process.env.DB_FILE_NAME, {});
 // const db = drizzle({ client });
 
+import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import userRoutes from "@/routes/users/users.routes.js";
@@ -16,7 +16,6 @@ import z, { ZodError } from "zod";
 import { db } from "./db/index.js";
 import { sql } from "drizzle-orm";
 import { cors } from "hono/cors";
-import { hashPw, verifyPw } from "./utils/passwordHandlers.js";
 
 const app = new Hono();
 
