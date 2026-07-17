@@ -21,6 +21,8 @@ const notoSans = Noto_Sans({
   variable: "--font-noto-sans",
 });
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: {
     template: "Tweeter - %s",
@@ -34,7 +36,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  await cookies();
   const serverCookie = await getServerCookie();
   const initialUser = await fetchMe(serverCookie);
 
