@@ -7,14 +7,14 @@ import { SQLiteTransaction } from "drizzle-orm/sqlite-core";
 import { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { UnauthenticatedError } from "./standardErrors.js";
-import { getConnInfo } from "@hono/node-server/conninfo";
+// import { getConnInfo } from "@hono/node-server/conninfo";
 
 export const COOKIE_NAME = process.env.SESSION_NAME ?? "session_id";
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: true,
-  sameSite: "Lax",
+  sameSite: "None",
   path: "/",
 } as const;
 
@@ -76,8 +76,10 @@ export const createSession = async ({
   }
   // const sessionId = crypto.randomUUID();
   const MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7 days
-  const info = getConnInfo(c);
-  const ipAddress = info.remote.address;
+  // const info = getConnInfo(c);
+  // const ipAddress = info.remote.address;
+  const ipAddress =
+    c.req.header("x-forwarded-for") || c.req.header("x-real-ip");
   const userAgent = c.req.header("User-Agent");
   const clearUserId = idNumberSchema.parse(userId);
   const now = new Date();
@@ -152,7 +154,8 @@ export const refreshSession = async ({
     return;
   const MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7 days
   const expiresAt = new Date(now.getTime() + MAX_AGE_SEC * 1000); //sec to  ms
-  const ipAddress = getConnInfo(c).remote.address;
+  const ipAddress =
+    c.req.header("x-forwarded-for") || c.req.header("x-real-ip");
   const userAgent = c.req.header("User-Agent");
   await db
     .update(sessions)
