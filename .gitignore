@@ -48,3 +48,6 @@ yarn-error.log*
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+#prettier
+.prettierrc
