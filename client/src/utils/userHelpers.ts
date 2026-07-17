@@ -3,14 +3,18 @@ export const COOKIE_NAME = process.env.NEXT_PUBLIC_COOKIE_NAME || "session_id";
  * actual request should start with /
  */
 export const API_URL =
+  process.env.NEXT_PUBLIC_PROXY_API_URL || "http://localhost:3001";
+
+export const ACTUAL_API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export const USER_ONLY_ROUTES = new Set(["/", "/bookmarks", "/settings"]);
 export const GUEST_ONLY_ROUTES = new Set(["/auth"]);
 
 export const fetchMe = async (cookie?: string): Promise<User | null> => {
+  const isServer = typeof window === "undefined";
   try {
-    const res = await fetch(`${API_URL}/auth/me`, {
+    const res = await fetch(`${isServer ? ACTUAL_API_URL : API_URL}/auth/me`, {
       cache: "no-store",
       credentials: "include",
       ...(cookie && {
