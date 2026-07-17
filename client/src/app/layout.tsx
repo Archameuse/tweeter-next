@@ -36,6 +36,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await cookies();
   const serverCookie = await getServerCookie();
   const initialUser = await fetchMe(serverCookie);
 
