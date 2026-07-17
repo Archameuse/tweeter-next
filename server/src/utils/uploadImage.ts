@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { mkdir, writeFile, unlink } from "fs/promises";
 import path from "node:path";
-import drive from "@/db/drive.js";
+import drive from "#/db/drive.js";
 import { Readable } from "node:stream";
 
 export enum UPLOAD_IMAGE_SCOPE {

@@ -1,7 +1,7 @@
-import { db } from "@/db/index.js";
-import { sessions } from "@/db/schema.js";
-import sessionsCache from "@/db/sessionsCache.js";
-import { idNumberSchema } from "@/schema.js";
+import { db } from "#/db/index.js";
+import { sessions } from "#/db/schema.js";
+import sessionsCache from "#/db/sessionsCache.js";
+import { idNumberSchema } from "#/schema.js";
 import { eq } from "drizzle-orm";
 import { SQLiteTransaction } from "drizzle-orm/sqlite-core";
 import { Context } from "hono";

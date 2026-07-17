@@ -1,4 +1,4 @@
-import { db } from "@/db/index.js";
+import { db } from "#/db/index.js";
 import {
   hashtags,
   likes,
@@ -6,7 +6,7 @@ import {
   saves,
   tweets,
   tweets_hashtags,
-} from "@/db/schema.js";
+} from "#/db/schema.js";
 import { and, eq, sql } from "drizzle-orm";
 import { SQLiteTransaction } from "drizzle-orm/sqlite-core";
 import { Hono } from "hono";
@@ -21,10 +21,10 @@ import {
   tweetExistsAndActionQuerySchema,
 } from "./tweets.schema.js";
 import { HTTPException } from "hono/http-exception";
-import uploadImage, { UPLOAD_IMAGE_SCOPE } from "@/utils/uploadImage.js";
-import { idNumberSchema, imageSchema } from "@/schema.js";
-import { ActionNoReturnError, Tweet404Error } from "@/utils/standardErrors.js";
-import { authMiddleware } from "@/middleware/auth.middleware.js";
+import uploadImage, { UPLOAD_IMAGE_SCOPE } from "#/utils/uploadImage.js";
+import { idNumberSchema, imageSchema } from "#/schema.js";
+import { ActionNoReturnError, Tweet404Error } from "#/utils/standardErrors.js";
+import { authMiddleware } from "#/middleware/auth.middleware.js";
 
 const app = new Hono();
 

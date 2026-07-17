@@ -1,8 +1,8 @@
-import { db } from "@/db/index.js";
-import { optionalAuthMiddleware } from "@/middleware/auth.middleware.js";
-import { dbUserToGlobalUserSchema, idNumberSchema } from "@/schema.js";
-import { deleteSession } from "@/utils/sessionsHandlers.js";
-import { User404Error } from "@/utils/standardErrors.js";
+import { db } from "#/db/index.js";
+import { optionalAuthMiddleware } from "#/middleware/auth.middleware.js";
+import { dbUserToGlobalUserSchema, idNumberSchema } from "#/schema.js";
+import { deleteSession } from "#/utils/sessionsHandlers.js";
+import { User404Error } from "#/utils/standardErrors.js";
 import { Hono } from "hono";
 
 const app = new Hono();

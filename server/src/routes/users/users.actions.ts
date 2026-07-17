@@ -1,7 +1,7 @@
-import { db } from "@/db/index.js";
-import { follows, sessions, users } from "@/db/schema.js";
-import { idNumberSchema, imageSchema } from "@/schema.js";
-import { ActionNoReturnError, User404Error } from "@/utils/standardErrors.js";
+import { db } from "#/db/index.js";
+import { follows, sessions, users } from "#/db/schema.js";
+import { idNumberSchema, imageSchema } from "#/schema.js";
+import { ActionNoReturnError, User404Error } from "#/utils/standardErrors.js";
 import { and, eq, getColumns, ne, sql } from "drizzle-orm";
 import { SQLiteTransaction } from "drizzle-orm/sqlite-core";
 import { Hono } from "hono";
@@ -14,10 +14,10 @@ import {
   globalUserSettingsToDbSettingsSchema,
   GlobalUserSettingsToDbSettingsType,
 } from "./users.schema.js";
-import uploadImage, { UPLOAD_IMAGE_SCOPE } from "@/utils/uploadImage.js";
-import { authMiddleware } from "@/middleware/auth.middleware.js";
-import { clearSessionsByUID, createSession } from "@/utils/sessionsHandlers.js";
-import { hashPw, verifyPw } from "@/utils/passwordHandlers.js";
+import uploadImage, { UPLOAD_IMAGE_SCOPE } from "#/utils/uploadImage.js";
+import { authMiddleware } from "#/middleware/auth.middleware.js";
+import { clearSessionsByUID, createSession } from "#/utils/sessionsHandlers.js";
+import { hashPw, verifyPw } from "#/utils/passwordHandlers.js";
 
 const app = new Hono();
 

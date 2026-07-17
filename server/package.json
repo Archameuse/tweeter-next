@@ -33,5 +33,8 @@
     "tsx": "^4.22.4",
     "typescript": "^5.9.3"
   },
-  "packageManager": "pnpm@11.9.0"
+  "packageManager": "pnpm@11.9.0",
+  "imports": {
+    "#/*": "./src/*"
+  }
 }

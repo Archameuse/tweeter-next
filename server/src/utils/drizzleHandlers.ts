@@ -1,8 +1,7 @@
-import { db } from "@/db/index.js";
-import { users } from "@/db/schema.js";
-import { cursorSchema } from "@/schema.js";
-import { and, count, gt, gte, lt, lte, or, sql, SQL } from "drizzle-orm";
-import { SQLiteColumn, SQLiteSelect } from "drizzle-orm/sqlite-core";
+import { db } from "#/db/index.js";
+import { cursorSchema } from "#/schema.js";
+import { and, gt, gte, lt, lte, or, sql } from "drizzle-orm";
+import { SQLiteSelect } from "drizzle-orm/sqlite-core";
 import z from "zod";
 
 const DEFAULT_PAGE_LIMIT = 10;

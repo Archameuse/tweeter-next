@@ -11,7 +11,7 @@ import {
   optionalNullSchema,
   passwordSchema,
   usernameSchema,
-} from "@/schema.js";
+} from "#/schema.js";
 import z from "zod";
 
 export enum USER_SCOPE {

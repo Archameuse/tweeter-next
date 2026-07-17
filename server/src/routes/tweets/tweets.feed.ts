@@ -1,4 +1,4 @@
-import { db } from "@/db/index.js";
+import { db } from "#/db/index.js";
 import {
   follows,
   hashtags,
@@ -8,7 +8,7 @@ import {
   tweets,
   tweets_hashtags,
   users,
-} from "@/db/schema.js";
+} from "#/db/schema.js";
 import {
   and,
   asc,
@@ -34,13 +34,13 @@ import {
   TweetPaginationInput,
   tweetPaginationQuerySchema,
 } from "./tweets.schema.js";
-import { idNumberSchema, idSchema } from "@/schema.js";
-import { MissingIdError } from "@/utils/standardErrors.js";
+import { idNumberSchema, idSchema } from "#/schema.js";
+import { MissingIdError } from "#/utils/standardErrors.js";
 import {
   authMiddleware,
   optionalAuthMiddleware,
-} from "@/middleware/auth.middleware.js";
-import { paginate } from "@/utils/drizzleHandlers.js";
+} from "#/middleware/auth.middleware.js";
+import { paginate } from "#/utils/drizzleHandlers.js";
 import { HTTPException } from "hono/http-exception";
 
 const app = new Hono();

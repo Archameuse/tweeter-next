@@ -1,11 +1,11 @@
-import { idNumberSchema, idSchema } from "@/schema.js";
+import { idNumberSchema, idSchema } from "#/schema.js";
 import {
   deleteSession,
   getSession,
   refreshSession,
   validateSession,
   VALIDATION_STATE,
-} from "@/utils/sessionsHandlers.js";
+} from "#/utils/sessionsHandlers.js";
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import z from "zod";

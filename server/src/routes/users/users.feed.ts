@@ -1,10 +1,10 @@
-import { db } from "@/db/index.js";
-import { follows, users } from "@/db/schema.js";
+import { db } from "#/db/index.js";
+import { follows, users } from "#/db/schema.js";
 import {
   dbUserToGlobalUserSchema,
   idNumberSchema,
   idSchema,
-} from "@/schema.js";
+} from "#/schema.js";
 import { desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -15,12 +15,12 @@ import {
   FOLLOW_SCOPE,
   USER_SCOPE,
 } from "./users.schema.js";
-import { MissingIdError } from "@/utils/standardErrors.js";
+import { MissingIdError } from "#/utils/standardErrors.js";
 import {
   authMiddleware,
   optionalAuthMiddleware,
-} from "@/middleware/auth.middleware.js";
-import { paginate } from "@/utils/drizzleHandlers.js";
+} from "#/middleware/auth.middleware.js";
+import { paginate } from "#/utils/drizzleHandlers.js";
 
 const app = new Hono();
 

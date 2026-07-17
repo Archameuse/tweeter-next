@@ -1,4 +1,4 @@
-import { db } from "@/db/index.js";
+import { db } from "#/db/index.js";
 import {
   follows,
   hashtags,
@@ -8,24 +8,24 @@ import {
   tweets,
   tweets_hashtags,
   users,
-} from "@/db/schema.js";
+} from "#/db/schema.js";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { UnauthenticatedError, User404Error } from "@/utils/standardErrors.js";
+import { UnauthenticatedError, User404Error } from "#/utils/standardErrors.js";
 import {
   clearSessionsByUID,
   createSession,
   deleteSession,
-} from "@/utils/sessionsHandlers.js";
-import { authMiddleware } from "@/middleware/auth.middleware.js";
+} from "#/utils/sessionsHandlers.js";
+import { authMiddleware } from "#/middleware/auth.middleware.js";
 import {
   createUserSchema,
   deleteUserSchema,
   loginUserSchema,
 } from "./auth.schema.js";
-import { dbUserToGlobalUserSchema } from "@/schema.js";
+import { dbUserToGlobalUserSchema } from "#/schema.js";
 import { and, eq, sql, ne, exists } from "drizzle-orm";
-import { hashPw, verifyPw } from "@/utils/passwordHandlers.js";
+import { hashPw, verifyPw } from "#/utils/passwordHandlers.js";
 import { alias } from "drizzle-orm/sqlite-core";
 
 const app = new Hono();

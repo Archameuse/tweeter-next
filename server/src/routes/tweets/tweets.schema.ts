@@ -9,8 +9,8 @@ import {
   looseUsernameSchema,
   optionalBooleanSchema,
   usernameSchema,
-} from "@/schema.js";
-import { paginationQuerySchema } from "@/utils/drizzleHandlers.js";
+} from "#/schema.js";
+import { paginationQuerySchema } from "#/utils/drizzleHandlers.js";
 import z from "zod";
 
 export enum FILTER {
