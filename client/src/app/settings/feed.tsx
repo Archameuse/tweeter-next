@@ -10,7 +10,7 @@ import { useMutation } from "@tanstack/react-query";
 import { CheckCircleIcon, LucideImageMinus } from "lucide-react";
 import { useState } from "react";
 import axios from "axios";
-import { API_URL } from "@/utils/userHelpers";
+import { ACTUAL_API_URL, API_URL } from "@/utils/userHelpers";
 import { useUser } from "@/providers/UserProvider";
 import {
   emailSchema,
@@ -52,7 +52,7 @@ export default function SettingsFeed({
     mutationFn: async (data: FormData) => {
       const avatarSize = avatarFile instanceof File ? avatarFile.size : 0;
       const bannerSize = bannerFile instanceof File ? bannerFile.size : 0;
-      const res = await axios.put(`${API_URL}/users/settings`, data, {
+      const res = await axios.put(`${ACTUAL_API_URL}/users/settings`, data, {
         withCredentials: true,
         /**
          *
