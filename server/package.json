@@ -35,6 +35,9 @@
   },
   "packageManager": "pnpm@11.9.0",
   "imports": {
-    "#/*": "./src/*"
+    "#/*": {
+      "default": "./dist/*",
+      "development": "./src/*"
+    }
   }
 }
