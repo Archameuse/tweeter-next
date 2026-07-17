@@ -12,7 +12,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "#/*": ["./src/*"]
+      "#/*": ["./src/*", "./dist/*"]
     },
     "types": ["node"]
   },
