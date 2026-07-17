@@ -9,6 +9,7 @@ import { getServerCookie } from "@/utils/serverUserHelpers";
 import PostReplyModal from "@/components/post/postReplyModal";
 import PostRepliesModal from "@/components/post/postRepliesModal";
 import FollowsModal from "@/components/modals/followsModal";
+import { cookies } from "next/headers";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -33,7 +34,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const initialUser = await fetchMe(await getServerCookie());
+  await cookies();
+  const serverCookie = await getServerCookie();
+  const initialUser = await fetchMe(serverCookie);
 
   return (
     <html
