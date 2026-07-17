@@ -39,10 +39,11 @@ export const fetchUser = async <T = User>(
   path: string,
   { cookie, ...options }: RequestInit & { cookie?: string } = {},
 ): Promise<{ data: T | null; error: string | null }> => {
+  const isServer = typeof window === "undefined";
   let data: T | null = null;
   let error: string | null = null;
   try {
-    const res = await fetch(`${API_URL}${path}`, {
+    const res = await fetch(`${isServer ? API_URL : ACTUAL_API_URL}${path}`, {
       ...options,
       credentials: "include",
       headers: {
