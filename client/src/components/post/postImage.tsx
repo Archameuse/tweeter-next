@@ -2,7 +2,13 @@ import { useEffect, useMemo, useRef } from "react";
 import ImageWrapper from "../ui/imageWrapper";
 import { useModalStore } from "@/store/useModalStore";
 
-export default function PostImage({ src }: { src: string }) {
+export default function PostImage({
+  src,
+  isAboveFold,
+}: {
+  src: string;
+  isAboveFold?: boolean;
+}) {
   const video = useRef<HTMLVideoElement>(null);
   const isVideo = useMemo(() => /\.(webm|mp4)($|\?)/i.test(src), [src]);
   const setModal = useModalStore((state) => state.setMediaData);
@@ -31,7 +37,11 @@ export default function PostImage({ src }: { src: string }) {
   return (
     <>
       {!isVideo ? (
-        <ImageWrapper onClick={click} src={src} />
+        <ImageWrapper
+          onClick={click}
+          src={src}
+          loading={isAboveFold ? "eager" : "lazy"}
+        />
       ) : (
         <video
           ref={video}

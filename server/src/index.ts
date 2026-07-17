@@ -31,7 +31,7 @@ app.onError((err, c) => {
   if (err instanceof HTTPException) {
     return c.json({ message: err.message }, err.status);
   }
-  console.error(err); // logs unexpected and zod errors
+
   if (err instanceof ZodError) {
     return c.json(
       {
@@ -43,6 +43,7 @@ app.onError((err, c) => {
       400,
     );
   }
+  console.error(err); // logs unexpected and zod errors
   return c.json({ message: "Internal Server Error" }, 500);
 });
 

@@ -4,7 +4,7 @@ import ModalMain from "../ui/mainModal";
 import { useModalStore } from "@/store/useModalStore";
 import { USER_LIST_KEY } from "../user/followButton";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { API_URL } from "@/utils/userHelpers";
 import { Loader2 } from "lucide-react";
 import TinyProfile from "../user/tinyProfile";
@@ -77,7 +77,7 @@ export default function FollowsModal() {
   }, [modalData, queryClient]);
   useEffect(() => {
     if (isError) {
-      if (error instanceof AxiosError) {
+      if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.message;
         alert(errorMessage || error.message);
       } else {

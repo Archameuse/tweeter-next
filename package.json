@@ -10,7 +10,9 @@
     "dev:studio": "concurrently \"pnpm dev\" \"pnpm studio\"",
     "studio": "pnpm --filter server studio",
     "studio:dev": "concurrently \"pnpm dev:server\" \"pnpm studio\"",
-    "push": "pnpm --filter server push"
+    "push": "pnpm --filter server push",
+    "build": "pnpm --filter \"*\" build",
+    "start": "pnpm --filter \"*\" start"
   },
   "devEngines": {
     "packageManager": {

@@ -1,5 +1,14 @@
 import { db } from "@/db/index.js";
-import { follows, likes, retweets, saves, tweets, users } from "@/db/schema.js";
+import {
+  follows,
+  hashtags,
+  likes,
+  retweets,
+  saves,
+  tweets,
+  tweets_hashtags,
+  users,
+} from "@/db/schema.js";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { UnauthenticatedError, User404Error } from "@/utils/standardErrors.js";
@@ -234,6 +243,32 @@ app.post("/delete", authMiddleware, async (c) => {
                 ),
               ),
           ),
+        ),
+      );
+    await tx
+      .update(hashtags)
+      .set({
+        tweets_count: sql<number>`${hashtags.tweets_count} - (
+        SELECT COUNT(*)
+        FROM ${tweets_hashtags}
+        INNER JOIN ${tweets}
+        USING (${sql.identifier(tweets.tweet_id.name)})
+        WHERE ${tweets_hashtags.hashtag_id} = ${hashtags.hashtag_id}
+        AND ${tweets.user_id} = ${userId}
+      )`,
+      })
+      .where(
+        exists(
+          tx
+            .select({ a: sql`1` })
+            .from(tweets_hashtags)
+            .innerJoin(tweets, eq(tweets.tweet_id, tweets_hashtags.tweet_id))
+            .where(
+              and(
+                eq(tweets_hashtags.hashtag_id, hashtags.hashtag_id),
+                eq(tweets.user_id, userId),
+              ),
+            ),
         ),
       );
     await tx.delete(users).where(eq(users.user_id, userId));

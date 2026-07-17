@@ -32,7 +32,7 @@ export default function PostsContainer({
         `}
     >
       {!isPending && data?.pages
-        ? data.pages.flatMap((page) =>
+        ? data.pages.flatMap((page, index) =>
             page.data.map((tweet) => (
               <PostMain
                 tweet={tweet}
@@ -42,6 +42,7 @@ export default function PostsContainer({
                     : tweet.id
                 }
                 listKeys={listKeys}
+                isAboveFold={index < 2}
               />
             )),
           )

@@ -39,7 +39,6 @@ export function Header() {
         <span className="sr-only">Tweeter logo</span>
         <Image
           alt={user ? "Go to explore" : "Tweeter logo"}
-          priority={true}
           src="/tweeter-small.svg"
           className="md:hidden"
           width={41}
@@ -47,15 +46,15 @@ export function Header() {
         />
         <Image
           alt={user ? "Go to explore" : "Tweeter logo"}
-          priority={true}
           src="/tweeter.svg"
           className="hidden dark:hidden md:block"
           width={126}
           height={30}
+          loading="eager"
+          preload
         />
         <Image
           alt={user ? "Go to explore" : "Tweeter logo"}
-          priority={true}
           src="/tweeter-light.svg"
           className="hidden md:dark:block"
           width={126}

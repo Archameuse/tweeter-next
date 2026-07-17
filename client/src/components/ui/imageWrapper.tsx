@@ -17,6 +17,7 @@ export default function ImageWrapper({
       draggable={false}
       className={`object-cover object-center select-none ${className ? className : ""}`}
       sizes="100%"
+      loading="lazy"
       {...props}
     />
   );

@@ -4,7 +4,7 @@ import ModalMain from "../ui/mainModal";
 import { useModalStore } from "@/store/useModalStore";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { TWEET_LIST_KEY } from "./postMain";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { API_URL } from "@/utils/userHelpers";
 import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
 import PostsContainer from "./postsContainer";
@@ -76,7 +76,7 @@ export default function PostRepliesModal() {
 
   useEffect(() => {
     if (isError) {
-      if (error instanceof AxiosError) {
+      if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.message;
         alert(errorMessage || error.message);
       } else {

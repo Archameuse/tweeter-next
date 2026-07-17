@@ -18,7 +18,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { API_URL } from "@/utils/userHelpers";
 import { useModalStore } from "@/store/useModalStore";
 
@@ -33,9 +33,11 @@ export enum TWEET_LIST_KEY {
 export default function PostMain({
   tweet,
   listKeys,
+  isAboveFold,
 }: {
   tweet: Tweet;
   listKeys: TWEET_LIST_KEY[];
+  isAboveFold?: boolean;
 }) {
   const { user } = useUser();
   const setReplyData = useModalStore((state) => state.setReplyData);
@@ -160,7 +162,7 @@ export default function PostMain({
           queryClient.setQueriesData({ queryKey: key, exact: false }, data);
         }
       }
-      if (err instanceof AxiosError) {
+      if (axios.isAxiosError(err)) {
         if (err.response?.data?.message) {
           return alert(err.response?.data?.message);
         }
@@ -221,7 +223,7 @@ export default function PostMain({
         </div>
         {tweet.image && (
           <div className="w-full h-96 rounded-md shadow-sm overflow-hidden relative">
-            <PostImage src={tweet.image} />
+            <PostImage src={tweet.image} isAboveFold={isAboveFold} />
           </div>
         )}
         <ul className="flex text-primaryGray dark:text-tertiaryGray text-xs font-noto-sans justify-end gap-4">

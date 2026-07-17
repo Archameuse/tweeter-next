@@ -3,9 +3,11 @@ import Image from "next/image";
 export function UserAvatar({
   src,
   size,
+  isAboveFold,
 }: {
-  src?: string | null;
   size: number;
+  src?: string | null;
+  isAboveFold?: boolean;
 }) {
   const avatar = src || "/noprofile.svg";
 
@@ -18,7 +20,8 @@ export function UserAvatar({
         className="object-cover object-center"
         fill
         sizes={`${size}px`}
-        loading="eager"
+        loading={isAboveFold ? "eager" : "lazy"}
+        preload={isAboveFold}
       />
     </div>
   );

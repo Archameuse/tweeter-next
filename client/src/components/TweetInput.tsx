@@ -21,7 +21,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useUser } from "@/providers/UserProvider";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { API_URL } from "@/utils/userHelpers";
 import { ImageLoadbar } from "@/app/settings/feed";
 import { TWEET_LIST_KEY } from "./post/postMain";
@@ -183,7 +183,7 @@ export default function TweetInput({
           queryClient.setQueriesData({ queryKey: key, exact: false }, data);
         }
       }
-      if (err instanceof AxiosError) {
+      if (axios.isAxiosError(err)) {
         if (err.response?.data?.message) {
           console.error(err);
           return alert(err.response?.data?.message);

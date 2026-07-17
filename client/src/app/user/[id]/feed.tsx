@@ -10,7 +10,7 @@ import ProfileTab from "@/components/user/profileTab";
 import { API_URL } from "@/utils/userHelpers";
 import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 
 // should correspond to backend filters
@@ -95,7 +95,7 @@ export default function UserFeed({
 
   useEffect(() => {
     if (isProfileError) {
-      if (profileError instanceof AxiosError) {
+      if (axios.isAxiosError(profileError)) {
         const errorMessage = profileError.response?.data?.message;
         alert(errorMessage || profileError.message);
       } else {
@@ -103,7 +103,7 @@ export default function UserFeed({
       }
     }
     if (isError) {
-      if (error instanceof AxiosError) {
+      if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.message;
         alert(errorMessage || error.message);
       } else {

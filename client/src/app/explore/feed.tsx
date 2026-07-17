@@ -6,7 +6,7 @@ import { SectionFragment } from "@/components/ui/sectionFragment";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { API_URL } from "@/utils/userHelpers";
 import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
 import PostsContainer from "@/components/post/postsContainer";
@@ -75,7 +75,7 @@ export default function ExploreFeed() {
   });
   useEffect(() => {
     if (isError) {
-      if (error instanceof AxiosError) {
+      if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.message;
         alert(errorMessage || error.message);
       } else {

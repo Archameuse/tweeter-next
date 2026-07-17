@@ -8,7 +8,7 @@ import WhoToFollow from "@/components/whoToFollow";
 import { API_URL } from "@/utils/userHelpers";
 import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { useEffect, useRef } from "react";
 
 export default function HomeFeed() {
@@ -58,7 +58,7 @@ export default function HomeFeed() {
   });
   useEffect(() => {
     if (isError) {
-      if (error instanceof AxiosError) {
+      if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.message;
         alert(errorMessage || error.message);
       } else {

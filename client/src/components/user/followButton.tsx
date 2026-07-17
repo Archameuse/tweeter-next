@@ -6,7 +6,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { UserRoundMinus, UserRoundPlus } from "lucide-react";
 import { ActionButton, BUTTON_VERSIONS } from "../ui/actionButton";
 
@@ -133,7 +133,7 @@ export default function FollowButton({
         }
       }
       // console.error(err);
-      if (err instanceof AxiosError) {
+      if (axios.isAxiosError(err)) {
         if (err.response?.data?.message) {
           return alert(err.response?.data?.message);
         }

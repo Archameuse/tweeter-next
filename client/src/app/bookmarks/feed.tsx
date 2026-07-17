@@ -9,7 +9,7 @@ import useScrollObserverCallback from "@/utils/useScrollObserverCallback";
 import PostsContainer from "@/components/post/postsContainer";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { API_URL } from "@/utils/userHelpers";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 
 export default function BookmarksFeed() {
   const [status, setStatus] = useState<STATUS>(STATUS.top);
@@ -58,7 +58,7 @@ export default function BookmarksFeed() {
   });
   useEffect(() => {
     if (isError) {
-      if (error instanceof AxiosError) {
+      if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.message;
         alert(errorMessage || error.message);
       } else {

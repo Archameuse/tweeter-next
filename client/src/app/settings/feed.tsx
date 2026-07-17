@@ -9,7 +9,7 @@ import validateImage from "@/utils/validateImage";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircleIcon, LucideImageMinus } from "lucide-react";
 import { useState } from "react";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { API_URL } from "@/utils/userHelpers";
 import { useUser } from "@/providers/UserProvider";
 import {
@@ -89,7 +89,7 @@ export default function SettingsFeed({
       alert("Success");
     },
     onError: (err) => {
-      if (err instanceof AxiosError) {
+      if (axios.isAxiosError(err)) {
         const errorMessage = err.response?.data.message;
         if (typeof errorMessage === "string") {
           alert(errorMessage);
@@ -114,10 +114,10 @@ export default function SettingsFeed({
       return res.data;
     },
     onError: (err) => {
-      if (err instanceof AxiosError) {
+      if (axios.isAxiosError(err)) {
         const errorMessage = err.response?.data.message;
         if (typeof errorMessage === "string") {
-          if (errorMessage.length < 60) alert(errorMessage);
+          alert(errorMessage);
           return console.error(err.response?.data);
         }
       }
