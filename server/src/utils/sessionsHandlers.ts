@@ -79,7 +79,7 @@ export const createSession = async ({
   // const info = getConnInfo(c);
   // const ipAddress = info.remote.address;
   const ipAddress =
-    c.req.header("x-forwarded-for") || c.req.header("x-real-ip");
+    c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown";
   const userAgent = c.req.header("User-Agent");
   const clearUserId = idNumberSchema.parse(userId);
   const now = new Date();
@@ -155,7 +155,7 @@ export const refreshSession = async ({
   const MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7 days
   const expiresAt = new Date(now.getTime() + MAX_AGE_SEC * 1000); //sec to  ms
   const ipAddress =
-    c.req.header("x-forwarded-for") || c.req.header("x-real-ip");
+    c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown";
   const userAgent = c.req.header("User-Agent");
   await db
     .update(sessions)

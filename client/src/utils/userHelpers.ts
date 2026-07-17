@@ -11,11 +11,11 @@ export const GUEST_ONLY_ROUTES = new Set(["/auth"]);
 export const fetchMe = async (cookie?: string): Promise<User | null> => {
   try {
     const res = await fetch(`${API_URL}/auth/me`, {
-      cache: "no-cache",
+      cache: "no-store",
       credentials: "include",
       ...(cookie && {
         headers: {
-          Cookie: `${COOKIE_NAME}=${cookie}`,
+          cookie: `${COOKIE_NAME}=${cookie}`,
         },
       }),
     });
