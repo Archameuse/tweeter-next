@@ -215,7 +215,7 @@ app.post("/delete", authMiddleware, async (c) => {
       .set({
         replies_count: sql<number>`${tweets.replies_count} - (
         SELECT COUNT(*)
-        FROM ${reply}
+        FROM ${tweets} as ${reply}
         WHERE ${reply.reply_to} = ${tweets.tweet_id}
         AND ${reply.user_id} = ${userId}
         )`,
