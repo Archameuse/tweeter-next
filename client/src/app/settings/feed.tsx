@@ -9,8 +9,8 @@ import validateImage from "@/utils/validateImage";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircleIcon, LucideImageMinus } from "lucide-react";
 import { useState } from "react";
-import axios from "axios";
-import { API_URL } from "@/utils/userHelpers";
+import axios, { AxiosError } from "axios";
+import { API_URL, fetchUploadToken } from "@/utils/userHelpers";
 import { useUser } from "@/providers/UserProvider";
 import {
   emailSchema,
@@ -52,8 +52,16 @@ export default function SettingsFeed({
     mutationFn: async (data: FormData) => {
       const avatarSize = avatarFile instanceof File ? avatarFile.size : 0;
       const bannerSize = bannerFile instanceof File ? bannerFile.size : 0;
+      const { data: uploadToken, error: uploadTokenError } =
+        await fetchUploadToken();
+      if (uploadTokenError || !uploadToken)
+        throw new AxiosError(
+          uploadTokenError || "Unknown error while fetching token",
+        );
       const res = await axios.put(`${API_URL}/users/settings`, data, {
-        withCredentials: true,
+        headers: {
+          ...uploadToken,
+        },
         /**
          *
          * This function does not do 100% correct calculation so bars are slightly off especially for smaller files and bigger texts

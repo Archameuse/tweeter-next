@@ -15,7 +15,10 @@ import {
   GlobalUserSettingsToDbSettingsType,
 } from "./users.schema.js";
 import uploadImage, { UPLOAD_IMAGE_SCOPE } from "#/utils/uploadImage.js";
-import { authMiddleware } from "#/middleware/auth.middleware.js";
+import {
+  authMiddleware,
+  uploadTokenMIddleware,
+} from "#/middleware/auth.middleware.js";
 import { clearSessionsByUID, createSession } from "#/utils/sessionsHandlers.js";
 import { hashPw, verifyPw } from "#/utils/passwordHandlers.js";
 
@@ -143,7 +146,7 @@ app.delete("/follow/:id{\\d+}", authMiddleware, async (c) => {
 /**
  * pass image (or status) as null to remove it
  */
-app.put("/settings", authMiddleware, async (c) => {
+app.put("/settings", uploadTokenMIddleware, async (c) => {
   const authId = c.get("userId");
   const formData = await c.req.formData();
   // const isFixed = await db.query.users.findFirst({
