@@ -38,7 +38,9 @@ export default async function RootLayout({
 }>) {
   await cookies();
   const serverCookie = await getServerCookie();
+  console.log("ROOT cookie:", serverCookie);
   const initialUser = await fetchMe(serverCookie);
+  console.log("ROOT initialUser:", initialUser);
 
   return (
     <html
