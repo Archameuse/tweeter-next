@@ -24,8 +24,9 @@ export const fetchMe = async (cookie?: string): Promise<User | null> => {
       }),
     });
     return res.ok ? await res.json() : null;
-  } catch {
+  } catch (error) {
     console.error("Network error. Please check your connection");
+    console.error(error);
     return null;
   }
 };
@@ -60,7 +61,8 @@ export const fetchUser = async <T = User>(
         (await res.json().catch(() => null))?.message ||
         `Server error: ${res.status}`;
     }
-  } catch {
+  } catch (error) {
+    console.error(error);
     error = "Network error. Please check your connection.";
   }
   return { data, error };
