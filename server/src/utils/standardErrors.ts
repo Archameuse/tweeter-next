@@ -47,3 +47,11 @@ export class ActionNoReturnError extends HTTPException {
     });
   }
 }
+
+export class NoUploadTokenError extends HTTPException {
+  constructor() {
+    super(500, {
+      message: "No UPLOAD_TOKEN_SECRET provided in .env",
+    });
+  }
+}

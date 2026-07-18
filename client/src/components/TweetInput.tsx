@@ -21,8 +21,8 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useUser } from "@/providers/UserProvider";
-import axios from "axios";
-import { API_URL } from "@/utils/userHelpers";
+import axios, { AxiosError } from "axios";
+import { ACTUAL_API_URL, fetchUploadToken } from "@/utils/userHelpers";
 import { ImageLoadbar } from "@/app/settings/feed";
 import { TWEET_LIST_KEY } from "./post/postMain";
 import { useModalStore } from "@/store/useModalStore";
@@ -61,11 +61,20 @@ export default function TweetInput({
       if (imageFile) {
         formData.append("image", imageFile);
       }
+      const { data: uploadToken, error: uploadTokenError } =
+        await fetchUploadToken();
+      if (uploadTokenError || !uploadToken)
+        throw new AxiosError(
+          uploadTokenError || "Unknown error while fetching token",
+        );
       const res = await axios.post<TweetResponse>(
-        `${API_URL}/tweets`,
+        `${ACTUAL_API_URL}/tweets`,
         formData,
         {
-          withCredentials: true,
+          headers: {
+            // Authorization: `Bearer ${uploadToken}`,
+            ...uploadToken,
+          },
           onUploadProgress: (progress) => {
             if (progress.progress) {
               setImageProgress(Math.floor(progress.progress * 100));

@@ -3,17 +3,23 @@ import {
   deleteSession,
   getSession,
   refreshSession,
+  UPLOAD_TOKEN_NAME,
+  UPLOAD_TOKEN_SECRET,
   validateSession,
   VALIDATION_STATE,
 } from "#/utils/sessionsHandlers.js";
+import { NoUploadTokenError } from "#/utils/standardErrors.js";
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
+import { verify } from "hono/jwt";
 import z from "zod";
 
 type AuthVariables = {
   sessionId: string;
   userId: z.infer<typeof idNumberSchema>;
 };
+
+type UploadTokenVariables = Pick<AuthVariables, "userId">;
 
 export const authMiddleware = createMiddleware<{
   Variables: AuthVariables;
@@ -64,5 +70,27 @@ export const optionalAuthMiddleware = createMiddleware<{
       }
     }
   } catch {}
+  await next();
+});
+
+export const uploadTokenMIddleware = createMiddleware<{
+  Variables: UploadTokenVariables;
+}>(async (c, next) => {
+  if (!UPLOAD_TOKEN_SECRET) throw new NoUploadTokenError();
+  const token = c.req.header(UPLOAD_TOKEN_NAME);
+  if (!token) {
+    throw new HTTPException(401, { message: "No upload token provided" });
+  }
+  try {
+    const payload = await verify(token, UPLOAD_TOKEN_SECRET, "HS256");
+    // if (typeof payload.id !== "number") throw new Error();
+    const userId = idNumberSchema.parse(payload.id);
+    c.set("userId", userId);
+  } catch {
+    throw new HTTPException(401, {
+      message:
+        "Unauthorized, token can't be verified (either expired or invalid)",
+    });
+  }
   await next();
 });

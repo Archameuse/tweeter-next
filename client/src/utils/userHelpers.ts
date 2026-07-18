@@ -1,9 +1,10 @@
 export const COOKIE_NAME = process.env.NEXT_PUBLIC_COOKIE_NAME || "session_id";
+export const UPLOAD_TOKEN_NAME =
+  process.env.NEXT_PUBLIC_UPLOAD_TOKEN_NAME || "upload_token";
 /**
  * actual request should start with /
  */
-export const API_URL =
-  process.env.NEXT_PUBLIC_PROXY_API_URL || "http://localhost:3001";
+export const API_URL = process.env.NEXT_PUBLIC_PROXY_API_URL || "/api-proxy";
 
 export const ACTUAL_API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -51,6 +52,39 @@ export const fetchUser = async <T = User>(
         "Content-Type": "application/json",
         ...(cookie && { Cookie: `${COOKIE_NAME}=${cookie}` }),
         ...options.headers,
+      },
+    });
+    if (res.ok) {
+      if (res.status === 204) data = null;
+      else data = await res.json();
+    } else {
+      error =
+        (await res.json().catch(() => null))?.message ||
+        `Server error: ${res.status}`;
+    }
+  } catch (error) {
+    console.error(error);
+    error = "Network error. Please check your connection.";
+  }
+  return { data, error };
+};
+
+/**
+ * Client only
+ */
+export const fetchUploadToken = async (): Promise<{
+  data: { [UPLOAD_TOKEN_NAME]: string } | null;
+  error: string | null;
+}> => {
+  let data: { [UPLOAD_TOKEN_NAME]: string } | null = null;
+  let error: string | null = null;
+  try {
+    const res = await fetch(`${API_URL}/auth/upload-token`, {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
       },
     });
     if (res.ok) {

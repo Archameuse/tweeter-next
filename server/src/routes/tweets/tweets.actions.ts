@@ -24,7 +24,10 @@ import { HTTPException } from "hono/http-exception";
 import uploadImage, { UPLOAD_IMAGE_SCOPE } from "#/utils/uploadImage.js";
 import { idNumberSchema, imageSchema } from "#/schema.js";
 import { ActionNoReturnError, Tweet404Error } from "#/utils/standardErrors.js";
-import { authMiddleware } from "#/middleware/auth.middleware.js";
+import {
+  authMiddleware,
+  uploadTokenMIddleware,
+} from "#/middleware/auth.middleware.js";
 
 const app = new Hono();
 
@@ -289,7 +292,7 @@ app.delete("/saves/:id{\\d+}", authMiddleware, async (c) => {
 });
 
 // main -> post
-app.post("/", authMiddleware, async (c) => {
+app.post("/", uploadTokenMIddleware, async (c) => {
   const formData = await c.req.formData();
   const { hashtag, ...rawTweetData } = globalTweetSchema.parse(
     formData.get("tweet"),

@@ -11,11 +11,17 @@ import {
 } from "#/db/schema.js";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { UnauthenticatedError, User404Error } from "#/utils/standardErrors.js";
+import {
+  NoUploadTokenError,
+  UnauthenticatedError,
+  User404Error,
+} from "#/utils/standardErrors.js";
 import {
   clearSessionsByUID,
   createSession,
   deleteSession,
+  UPLOAD_TOKEN_NAME,
+  UPLOAD_TOKEN_SECRET,
 } from "#/utils/sessionsHandlers.js";
 import { authMiddleware } from "#/middleware/auth.middleware.js";
 import {
@@ -27,6 +33,7 @@ import { dbUserToGlobalUserSchema } from "#/schema.js";
 import { and, eq, sql, ne, exists } from "drizzle-orm";
 import { hashPw, verifyPw } from "#/utils/passwordHandlers.js";
 import { alias } from "drizzle-orm/sqlite-core";
+import { sign } from "hono/jwt";
 
 const app = new Hono();
 
@@ -274,6 +281,20 @@ app.post("/delete", authMiddleware, async (c) => {
     await tx.delete(users).where(eq(users.user_id, userId));
   });
   return c.body(null, 204);
+});
+
+app.post("upload-token", authMiddleware, async (c) => {
+  if (!UPLOAD_TOKEN_SECRET) throw new NoUploadTokenError();
+  const userId = c.get("userId");
+  const token = await sign(
+    {
+      id: userId,
+      exp: Math.floor(Date.now() / 1000) + 60, // 1 minute, more than enough to make exactly one request
+    },
+    UPLOAD_TOKEN_SECRET,
+    "HS256",
+  );
+  return c.json({ [UPLOAD_TOKEN_NAME]: token });
 });
 
 export default app;
