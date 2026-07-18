@@ -10,6 +10,9 @@ import { UnauthenticatedError } from "./standardErrors.js";
 // import { getConnInfo } from "@hono/node-server/conninfo";
 
 export const COOKIE_NAME = process.env.SESSION_NAME ?? "session_id";
+export const UPLOAD_TOKEN_NAME =
+  process.env.UPLOAD_TOKEN_NAME ?? "upload_token";
+export const UPLOAD_TOKEN_SECRET = process.env.UPLOAD_TOKEN_SECRET;
 
 const COOKIE_OPTIONS = {
   httpOnly: true,

@@ -1,11 +1,11 @@
-import sharp from "sharp";
+// import sharp from "sharp";
 // import { mkdir, writeFile, unlink } from "fs/promises";
 // import path from "node:path";
 import drive from "#/db/drive.js";
 import { Readable } from "node:stream";
-sharp.cache(false);
-sharp.simd(false);
-sharp.concurrency(1);
+// sharp.cache(false);
+// sharp.simd(false);
+// sharp.concurrency(1);
 
 export enum UPLOAD_IMAGE_SCOPE {
   tweet,
@@ -18,14 +18,15 @@ export default async function uploadImage(
 ): Promise<{ route: string; onError: () => Promise<void> }> {
   // const timeStart = performance.now();
   const buffer = Buffer.from(await image.arrayBuffer());
-  const webpBuffer = await sharp(buffer, { animated: false })
-    .webp({
-      quality: 78,
-      effort: 3,
-      lossless: false,
-      // smartSubsample: true,
-    })
-    .toBuffer();
+  const webpBuffer = buffer
+  // const webpBuffer = await sharp(buffer, { animated: false })
+  //   .webp({
+  //     quality: 78,
+  //     effort: 3,
+  //     lossless: false,
+  //     // smartSubsample: true,
+  //   })
+  //   .toBuffer();
   const filename = `${crypto.randomUUID()}.webp`;
   let folderId: string | undefined;
   switch (scope) {

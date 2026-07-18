@@ -9,8 +9,8 @@ import validateImage from "@/utils/validateImage";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircleIcon, LucideImageMinus } from "lucide-react";
 import { useState } from "react";
-import axios from "axios";
-import { ACTUAL_API_URL, API_URL } from "@/utils/userHelpers";
+import axios, { AxiosError } from "axios";
+import { ACTUAL_API_URL, API_URL, fetchUploadToken } from "@/utils/userHelpers";
 import { useUser } from "@/providers/UserProvider";
 import {
   emailSchema,
@@ -52,8 +52,16 @@ export default function SettingsFeed({
     mutationFn: async (data: FormData) => {
       const avatarSize = avatarFile instanceof File ? avatarFile.size : 0;
       const bannerSize = bannerFile instanceof File ? bannerFile.size : 0;
+      const { data: uploadToken, error: uploadTokenError } =
+        await fetchUploadToken();
+      if (uploadTokenError || !uploadToken)
+        throw new AxiosError(
+          uploadTokenError || "Unknown error while fetching token",
+        );
       const res = await axios.put(`${ACTUAL_API_URL}/users/settings`, data, {
-        withCredentials: true,
+        headers: {
+          ...uploadToken,
+        },
         /**
          *
          * This function does not do 100% correct calculation so bars are slightly off especially for smaller files and bigger texts
@@ -90,10 +98,13 @@ export default function SettingsFeed({
     },
     onError: (err) => {
       if (axios.isAxiosError(err)) {
-        const errorMessage = err.response?.data.message;
-        if (typeof errorMessage === "string") {
-          alert(errorMessage);
-          return console.error(err.response?.data);
+        console.error(err.response?.data);
+        if (err.request && !err.response)
+          return alert(
+            "Image upload is too big and vercel rejected it (I genuinely don't know what vercel's limit is so just try smaller images).",
+          );
+        if (err.response?.data.message) {
+          return alert(err.response?.data.message);
         }
       }
       alert("Unknown error");
@@ -136,7 +147,7 @@ export default function SettingsFeed({
     setShowBannerModal(true);
   };
   const handleSelectBanner = async (file: File) => {
-    const { error, localUrl } = await validateImage(file, 10);
+    const { error, localUrl } = await validateImage(file, 2048);
     if (!localUrl) return alert(error);
     if (bannerUrl && bannerUrl.startsWith("blob:"))
       URL.revokeObjectURL(bannerUrl);
@@ -385,11 +396,15 @@ export default function SettingsFeed({
         isOpen={showBannerModal}
         onClose={() => setShowBannerModal(false)}
         onSelect={handleSelectBanner}
+        maxSize={0.6}
+        maxWoH={1280}
       />
       <ImageCropModal
         isOpen={showAvatarModal}
         onClose={() => setShowAvatarModal(false)}
         onSelect={handleSelectAvatar}
+        maxSize={0.2}
+        maxWoH={512}
       />
     </form>
   );

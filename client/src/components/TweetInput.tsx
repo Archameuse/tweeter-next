@@ -21,13 +21,13 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useUser } from "@/providers/UserProvider";
-import axios from "axios";
-import { ACTUAL_API_URL } from "@/utils/userHelpers";
+import axios, { AxiosError } from "axios";
+import { ACTUAL_API_URL, fetchUploadToken } from "@/utils/userHelpers";
 import { ImageLoadbar } from "@/app/settings/feed";
 import { TWEET_LIST_KEY } from "./post/postMain";
 import { useModalStore } from "@/store/useModalStore";
 
-const MAX_IMAGE_SIZE = 1024 * 1024 * 20; //bytes
+const MAX_IMAGE_SIZE = 650; //KB
 
 export default function TweetInput({
   limit = 150,
@@ -61,11 +61,20 @@ export default function TweetInput({
       if (imageFile) {
         formData.append("image", imageFile);
       }
+      const { data: uploadToken, error: uploadTokenError } =
+        await fetchUploadToken();
+      if (uploadTokenError || !uploadToken)
+        throw new AxiosError(
+          uploadTokenError || "Unknown error while fetching token",
+        );
       const res = await axios.post<TweetResponse>(
         `${ACTUAL_API_URL}/tweets`,
         formData,
         {
-          withCredentials: true,
+          headers: {
+            // Authorization: `Bearer ${uploadToken}`,
+            ...uploadToken,
+          },
           onUploadProgress: (progress) => {
             if (progress.progress) {
               setImageProgress(Math.floor(progress.progress * 100));
@@ -184,8 +193,12 @@ export default function TweetInput({
         }
       }
       if (axios.isAxiosError(err)) {
+        console.error(err);
+        if (err.request && !err.response)
+          return alert(
+            "Image upload is too big and vercel rejected it (I genuinely don't know what vercel's limit is so just try smaller image).",
+          );
         if (err.response?.data?.message) {
-          console.error(err);
           return alert(err.response?.data?.message);
         }
       }
@@ -385,6 +398,8 @@ export default function TweetInput({
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         onSelect={handleSelectImage}
+        maxSize={0.6}
+        maxWoH={1920}
       />
     </div>
   );

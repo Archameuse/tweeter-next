@@ -7,14 +7,23 @@ import Cropper, { Area, Point } from "react-easy-crop";
 import ImageWrapper from "../ui/imageWrapper";
 import { ActionButton, BUTTON_VERSIONS } from "../ui/actionButton";
 
+/**
+ *
+ * @param maxSize - maxSize in MB for compression
+ * @returns
+ */
 export default function ImageCropModal({
   isOpen,
   onSelect,
   onClose,
+  maxSize,
+  maxWoH = 128,
 }: {
   isOpen: boolean;
   onSelect: (src: File) => void;
   onClose: () => void;
+  maxSize?: number;
+  maxWoH?: number;
 }) {
   const [cropImage, setCropImage] = useState<string | null>(null);
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -23,7 +32,7 @@ export default function ImageCropModal({
   const modalRef = useRef<HTMLDialogElement>(null);
 
   const handleSelectImage = async (file: File) => {
-    const { error, localUrl } = await validateImage(file, 10);
+    const { error, localUrl } = await validateImage(file, 2048);
     if (!localUrl) return alert(error);
     if (cropImage && cropImage.startsWith("blob:"))
       URL.revokeObjectURL(cropImage);
@@ -85,7 +94,11 @@ export default function ImageCropModal({
       noScroll
     >
       {!cropImage ? (
-        <ImageUploadContent onSelect={handleSelectImage} />
+        <ImageUploadContent
+          onSelect={handleSelectImage}
+          maxSize={maxSize}
+          maxWoH={maxWoH}
+        />
       ) : (
         <div className="flex flex-col gap-4 w-full relative">
           <div className="w-full relative">

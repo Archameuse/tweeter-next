@@ -3,17 +3,28 @@ import { useEffect, useRef } from "react";
 import ModalMain from "../ui/mainModal";
 import Image from "next/image";
 import { ActionButton } from "../ui/actionButton";
+import imageCompression from "browser-image-compression";
 
 const imageType = /^image\//;
 
+/**
+ *
+ * @param maxSize - max size in MB for compression
+ * @param maxWoH - maximum width or height in px
+ * @returns
+ */
 export default function ImageUploadModal({
   isOpen,
   onSelect,
   onClose,
+  maxSize,
+  maxWoH,
 }: {
   isOpen: boolean;
   onSelect: (file: File) => void;
   onClose: () => void;
+  maxSize?: number;
+  maxWoH?: number;
 }) {
   const modalRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -23,15 +34,27 @@ export default function ImageUploadModal({
   }, [isOpen]);
   return (
     <ModalMain onClose={onClose} ref={modalRef} headline="Upload image">
-      <ImageUploadContent onSelect={onSelect} />
+      <ImageUploadContent
+        onSelect={onSelect}
+        maxSize={maxSize}
+        maxWoH={maxWoH}
+      />
     </ModalMain>
   );
 }
-
+/**
+ *
+ * @param maxSize max size for compression in MB, default 0.8
+ * @returns
+ */
 export function ImageUploadContent({
   onSelect,
+  maxSize = 0.6,
+  maxWoH = 1920,
 }: {
   onSelect: (e: File) => void;
+  maxSize?: number;
+  maxWoH?: number;
 }) {
   const dropzoneRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,17 +64,30 @@ export function ImageUploadContent({
   const dropImage = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (!file) return alert("No file selected");
-    if (!imageType.test(file.type)) return alert("File is not an image");
-    onSelect(file);
+    preProcessImage(file);
   };
-  const selectImage = () => {
+  const selectImage = async () => {
     if (!fileInputRef.current) return;
     const file = fileInputRef.current.files?.[0];
     fileInputRef.current.value = "";
-    if (!file) return alert("No image selected");
-    if (!imageType.test(file.type)) return alert("File is not an image");
-    onSelect(file);
+    preProcessImage(file);
+  };
+  const preProcessImage = async (image?: File) => {
+    if (!image) return alert("No image selected");
+    if (!imageType.test(image.type)) return alert("File is not an image");
+    try {
+      const compressedFile = await imageCompression(image, {
+        maxSizeMB: maxSize,
+        maxWidthOrHeight: maxWoH,
+        fileType: "image/webp",
+        initialQuality: 0.8,
+        useWebWorker: true,
+      });
+      if (compressedFile) image = compressedFile;
+    } catch (error) {
+      console.error("Compression failed: ", error);
+    }
+    onSelect(image);
   };
   return (
     <main

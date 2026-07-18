@@ -1,4 +1,4 @@
-import { Loader2, LucideIcon } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 import React, { useMemo } from "react";
 
 /**

@@ -8,7 +8,7 @@ export function PageContainer({
   return (
     <div
       ref={ref}
-      className="overflow-y-scroll h-[calc(100vh-4rem)] w-screen dark:text-white"
+      className="overflow-y-scroll overflow-x-hidden h-[calc(100vh-4rem)] w-screen dark:text-white"
     >
       <div className="flex flex-col lg:flex-row gap-6 max-w-5xl w-full m-auto py-4">
         {children}
