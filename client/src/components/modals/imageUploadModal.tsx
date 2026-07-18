@@ -83,7 +83,6 @@ export function ImageUploadContent({
         initialQuality: 0.8,
         useWebWorker: true,
       });
-      console.log(Math.ceil(compressedFile.size / 1024) + "KB");
       if (compressedFile) image = compressedFile;
     } catch (error) {
       console.error("Compression failed: ", error);

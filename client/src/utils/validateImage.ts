@@ -10,7 +10,7 @@ export default async function validateImage(
 ): Promise<{ error?: string; localUrl?: string }> {
   if (file.size >= maxSize * 1024)
     return {
-      error: `Image should be less than ${Math.floor(maxSize)} KB`,
+      error: `Image should be less than ${Math.ceil(maxSize)} KB. Current size is ${Math.ceil(file.size / 1024)} KB`,
     };
 
   const localUrl = URL.createObjectURL(file);
