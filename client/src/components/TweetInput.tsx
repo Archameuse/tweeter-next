@@ -22,7 +22,7 @@ import {
 } from "@tanstack/react-query";
 import { useUser } from "@/providers/UserProvider";
 import axios from "axios";
-import { ACTUAL_API_URL } from "@/utils/userHelpers";
+import { API_URL } from "@/utils/userHelpers";
 import { ImageLoadbar } from "@/app/settings/feed";
 import { TWEET_LIST_KEY } from "./post/postMain";
 import { useModalStore } from "@/store/useModalStore";
@@ -62,7 +62,7 @@ export default function TweetInput({
         formData.append("image", imageFile);
       }
       const res = await axios.post<TweetResponse>(
-        `${ACTUAL_API_URL}/tweets`,
+        `${API_URL}/tweets`,
         formData,
         {
           withCredentials: true,
