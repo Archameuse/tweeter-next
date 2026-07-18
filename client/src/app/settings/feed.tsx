@@ -396,11 +396,15 @@ export default function SettingsFeed({
         isOpen={showBannerModal}
         onClose={() => setShowBannerModal(false)}
         onSelect={handleSelectBanner}
+        maxSize={0.6}
+        maxWoH={1280}
       />
       <ImageCropModal
         isOpen={showAvatarModal}
         onClose={() => setShowAvatarModal(false)}
         onSelect={handleSelectAvatar}
+        maxSize={0.2}
+        maxWoH={512}
       />
     </form>
   );

@@ -398,6 +398,8 @@ export default function TweetInput({
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         onSelect={handleSelectImage}
+        maxSize={0.6}
+        maxWoH={1920}
       />
     </div>
   );

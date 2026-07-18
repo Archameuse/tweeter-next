@@ -149,18 +149,18 @@ app.delete("/follow/:id{\\d+}", authMiddleware, async (c) => {
 app.put("/settings", uploadTokenMIddleware, async (c) => {
   const authId = c.get("userId");
   const formData = await c.req.formData();
-  // const isFixed = await db.query.users.findFirst({
-  //   columns: { fixed_user: true },
-  //   where: { user_id: authId },
-  // });
-  // if (isFixed?.fixed_user)
-  //   throw new HTTPException(400, {
-  //     message:
-  //       "This user exists for testing purposes hence its fixed, meaning its impossible to change its settings via API calls, create new one.",
-  //   });
-  // const updateSettingsData = globalUserSettingsToDbSettingsSchema.parse(
-  //   formData.get("settings"),
-  // );
+  const isFixed = await db.query.users.findFirst({
+    columns: { fixed_user: true },
+    where: { user_id: authId },
+  });
+  if (isFixed?.fixed_user)
+    throw new HTTPException(400, {
+      message:
+        "This user exists for testing purposes hence its fixed, meaning its impossible to change its settings via API calls, create new one.",
+    });
+  const updateSettingsData = globalUserSettingsToDbSettingsSchema.parse(
+    formData.get("settings"),
+  );
   const updateSettingsQuery = globalUserSettingsSchema.parse(
     formData.get("settings"),
   );
@@ -168,111 +168,110 @@ app.put("/settings", uploadTokenMIddleware, async (c) => {
   const avatarImage = imageSchema.parse(formData.get("avatar"));
   const bannerImage = imageSchema.parse(formData.get("banner"));
 
-  return c.json("success");
-  // let onAvatarError, onBannerError;
+  let onAvatarError, onBannerError;
 
-  // if (avatarImage) {
-  //   const { route, onError } = await uploadImage(
-  //     avatarImage,
-  //     UPLOAD_IMAGE_SCOPE.avatar,
-  //   );
-  //   //set avatar
-  //   filteredSettingsQuery.avatar = route;
-  //   onAvatarError = onError;
-  // } else if (avatarImage === null) {
-  //   filteredSettingsQuery.avatar = null;
-  // }
-  // if (bannerImage) {
-  //   const { route, onError } = await uploadImage(
-  //     bannerImage,
-  //     UPLOAD_IMAGE_SCOPE.avatar,
-  //   );
-  //   //set banner
-  //   filteredSettingsQuery.banner = route;
-  //   onBannerError = onError;
-  // } else if (bannerImage === null) {
-  //   filteredSettingsQuery.banner = null;
-  // }
+  if (avatarImage) {
+    const { route, onError } = await uploadImage(
+      avatarImage,
+      UPLOAD_IMAGE_SCOPE.avatar,
+    );
+    //set avatar
+    filteredSettingsQuery.avatar = route;
+    onAvatarError = onError;
+  } else if (avatarImage === null) {
+    filteredSettingsQuery.avatar = null;
+  }
+  if (bannerImage) {
+    const { route, onError } = await uploadImage(
+      bannerImage,
+      UPLOAD_IMAGE_SCOPE.avatar,
+    );
+    //set banner
+    filteredSettingsQuery.banner = route;
+    onBannerError = onError;
+  } else if (bannerImage === null) {
+    filteredSettingsQuery.banner = null;
+  }
 
-  // try {
-  //   if (updateSettingsQuery.username || updateSettingsQuery.email) {
-  //     const [exists] = await db
-  //       .select({
-  //         ...(updateSettingsQuery.username && {
-  //           username_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.username_guard} = ${updateSettingsQuery.username.toLowerCase()} AND ${users.user_id} != ${authId})`,
-  //         }),
-  //         ...(updateSettingsQuery.email && {
-  //           email_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.email_guard} = ${updateSettingsQuery.email.toLowerCase()} AND ${users.user_id} != ${authId})`,
-  //         }),
-  //       })
-  //       .from(users)
-  //       .limit(1);
-  //     if (exists) {
-  //       if (exists.email_taken)
-  //         throw new HTTPException(409, { message: "This email is taken" });
-  //       if (exists.username_taken)
-  //         throw new HTTPException(409, { message: "This username is taken" });
-  //       if (updateSettingsQuery.username)
-  //         filteredSettingsQuery.username = updateSettingsQuery.username; //set username
-  //       if (updateSettingsQuery.email)
-  //         filteredSettingsQuery.email = updateSettingsQuery.email; //set email
-  //     }
-  //   }
-  //   if (updateSettingsQuery.status || updateSettingsQuery.status === null)
-  //     filteredSettingsQuery.status = updateSettingsQuery.status; //set status
-  //   if (updateSettingsQuery.password) {
-  //     if (!updateSettingsQuery.oldPassword)
-  //       throw new HTTPException(400, { message: "No old password provided" });
-  //     const currentPw = (
-  //       await db.query.users.findFirst({
-  //         columns: { password: true },
-  //         where: { user_id: authId },
-  //       })
-  //     )?.password;
-  //     if (!currentPw)
-  //       throw new HTTPException(500, {
-  //         message:
-  //           "For some reason can't get currently logged in user's password, unable to proceed",
-  //       });
-  //     if (!(await verifyPw(updateSettingsQuery.oldPassword, currentPw)))
-  //       throw new HTTPException(400, {
-  //         message: "Wrong old password provided",
-  //       });
-  //     filteredSettingsQuery.password = await hashPw(
-  //       updateSettingsQuery.password,
-  //     ); // set password
-  //   }
-  //   if (Object.keys(filteredSettingsQuery).length < 1)
-  //     throw new HTTPException(409, { message: "Empty request" });
+  try {
+    if (updateSettingsQuery.username || updateSettingsQuery.email) {
+      const [exists] = await db
+        .select({
+          ...(updateSettingsQuery.username && {
+            username_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.username_guard} = ${updateSettingsQuery.username.toLowerCase()} AND ${users.user_id} != ${authId})`,
+          }),
+          ...(updateSettingsQuery.email && {
+            email_taken: sql<boolean>`EXISTS (SELECT 1 FROM ${users} WHERE ${users.email_guard} = ${updateSettingsQuery.email.toLowerCase()} AND ${users.user_id} != ${authId})`,
+          }),
+        })
+        .from(users)
+        .limit(1);
+      if (exists) {
+        if (exists.email_taken)
+          throw new HTTPException(409, { message: "This email is taken" });
+        if (exists.username_taken)
+          throw new HTTPException(409, { message: "This username is taken" });
+        if (updateSettingsQuery.username)
+          filteredSettingsQuery.username = updateSettingsQuery.username; //set username
+        if (updateSettingsQuery.email)
+          filteredSettingsQuery.email = updateSettingsQuery.email; //set email
+      }
+    }
+    if (updateSettingsQuery.status || updateSettingsQuery.status === null)
+      filteredSettingsQuery.status = updateSettingsQuery.status; //set status
+    if (updateSettingsQuery.password) {
+      if (!updateSettingsQuery.oldPassword)
+        throw new HTTPException(400, { message: "No old password provided" });
+      const currentPw = (
+        await db.query.users.findFirst({
+          columns: { password: true },
+          where: { user_id: authId },
+        })
+      )?.password;
+      if (!currentPw)
+        throw new HTTPException(500, {
+          message:
+            "For some reason can't get currently logged in user's password, unable to proceed",
+        });
+      if (!(await verifyPw(updateSettingsQuery.oldPassword, currentPw)))
+        throw new HTTPException(400, {
+          message: "Wrong old password provided",
+        });
+      filteredSettingsQuery.password = await hashPw(
+        updateSettingsQuery.password,
+      ); // set password
+    }
+    if (Object.keys(filteredSettingsQuery).length < 1)
+      throw new HTTPException(409, { message: "Empty request" });
 
-  //   const [res] = await db
-  //     .update(users)
-  //     .set(filteredSettingsQuery)
-  //     .where(eq(users.user_id, authId))
-  //     .returning({
-  //       user_id: users.user_id,
-  //       username: users.username,
-  //       email: users.email,
-  //       avatar: users.avatar,
-  //       banner: users.banner,
-  //       status: users.status,
-  //     });
-  //   if (!res) throw new User404Error(authId);
-  //   // invalidating sessions since password is changed
-  //   if (filteredSettingsQuery.password) {
-  //     await clearSessionsByUID(authId);
-  //     await createSession({ userId: authId, c, skipDeletion: true });
-  //   }
-  //   return c.json(dbUserSettingsToGlobalUserSettingsSchema.parse(res), 201);
-  // } catch (error) {
-  //   try {
-  //     if (onAvatarError) await onAvatarError();
-  //     if (onBannerError) await onBannerError();
-  //   } catch {
-  //     console.error("Error cleaning orphaned files");
-  //   }
-  //   throw error;
-  // }
+    const [res] = await db
+      .update(users)
+      .set(filteredSettingsQuery)
+      .where(eq(users.user_id, authId))
+      .returning({
+        user_id: users.user_id,
+        username: users.username,
+        email: users.email,
+        avatar: users.avatar,
+        banner: users.banner,
+        status: users.status,
+      });
+    if (!res) throw new User404Error(authId);
+    // invalidating sessions since password is changed
+    if (filteredSettingsQuery.password) {
+      await clearSessionsByUID(authId);
+      await createSession({ userId: authId, c, skipDeletion: true });
+    }
+    return c.json(dbUserSettingsToGlobalUserSettingsSchema.parse(res), 201);
+  } catch (error) {
+    try {
+      if (onAvatarError) await onAvatarError();
+      if (onBannerError) await onBannerError();
+    } catch {
+      console.error("Error cleaning orphaned files");
+    }
+    throw error;
+  }
 });
 
 export default app;
