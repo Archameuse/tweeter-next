@@ -218,7 +218,7 @@ export default function PostMain({
           </div>
         </Link>
         <div className="font-noto-sans text-secondaryGray dark:text-white">
-          <p>{tweet.content}</p>
+          <p className="wrap-break-word">{tweet.content}</p>
           {tweet.hashtag && <p className="mt-4 opacity-60">{"#" + hashtag}</p>}
         </div>
         {tweet.image && (

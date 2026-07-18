@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import ModalMain from "../ui/mainModal";
 import Image from "next/image";
 import { ActionButton } from "../ui/actionButton";
+import imageCompression from "browser-image-compression";
 
 const imageType = /^image\//;
 
@@ -41,17 +42,31 @@ export function ImageUploadContent({
   const dropImage = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (!file) return alert("No file selected");
-    if (!imageType.test(file.type)) return alert("File is not an image");
-    onSelect(file);
+    preProcessImage(file);
   };
-  const selectImage = () => {
+  const selectImage = async () => {
     if (!fileInputRef.current) return;
     const file = fileInputRef.current.files?.[0];
     fileInputRef.current.value = "";
-    if (!file) return alert("No image selected");
-    if (!imageType.test(file.type)) return alert("File is not an image");
-    onSelect(file);
+    preProcessImage(file);
+  };
+  const preProcessImage = async (image?: File) => {
+    if (!image) return alert("No image selected");
+    if (!imageType.test(image.type)) return alert("File is not an image");
+    // try {
+    //   const compressedFile = await imageCompression(image, {
+    //     maxSizeMB: 0.6,
+    //     maxWidthOrHeight: 1920,
+    //     fileType: "image/webp",
+    //     initialQuality: 0.8,
+    //     useWebWorker: true,
+    //   });
+    //   console.log(Math.ceil(compressedFile.size / 1024) + "KB");
+    //   if (compressedFile) image = compressedFile;
+    // } catch (error) {
+    //   console.error("Compression failed: ", error);
+    // }
+    onSelect(image);
   };
   return (
     <main

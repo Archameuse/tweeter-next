@@ -27,7 +27,7 @@ import { ImageLoadbar } from "@/app/settings/feed";
 import { TWEET_LIST_KEY } from "./post/postMain";
 import { useModalStore } from "@/store/useModalStore";
 
-const MAX_IMAGE_SIZE = 1024 * 1024 * 20; //bytes
+const MAX_IMAGE_SIZE = 650; //KB
 
 export default function TweetInput({
   limit = 150,
