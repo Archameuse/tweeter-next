@@ -149,8 +149,7 @@ export default function SettingsFeed({
   };
 
   const handleSelectAvatar = async (file: File) => {
-    const { error, localUrl } = await validateImage(file, 2048);
-    if (!localUrl) return alert(error);
+    const localUrl = URL.createObjectURL(file);
     if (avatarUrl && avatarUrl.startsWith("blob:"))
       URL.revokeObjectURL(avatarUrl);
     setAvatarUrl(localUrl);

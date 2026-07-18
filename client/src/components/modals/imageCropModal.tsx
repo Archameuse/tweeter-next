@@ -23,7 +23,7 @@ export default function ImageCropModal({
   const modalRef = useRef<HTMLDialogElement>(null);
 
   const handleSelectImage = async (file: File) => {
-    const { error, localUrl } = await validateImage(file, 10);
+    const { error, localUrl } = await validateImage(file, 2048);
     if (!localUrl) return alert(error);
     if (cropImage && cropImage.startsWith("blob:"))
       URL.revokeObjectURL(cropImage);
