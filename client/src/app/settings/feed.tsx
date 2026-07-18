@@ -91,7 +91,7 @@ export default function SettingsFeed({
     onError: (err) => {
       if (axios.isAxiosError(err)) {
         console.error(err.response?.data);
-        if (err.response?.status === 503)
+        if (err.request && !err.response)
           return alert(
             "Image upload is too big and vercel rejected it (I genuinely don't know what vercel's limit is so just try smaller images).",
           );
