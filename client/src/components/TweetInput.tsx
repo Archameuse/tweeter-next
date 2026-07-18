@@ -193,8 +193,12 @@ export default function TweetInput({
         }
       }
       if (axios.isAxiosError(err)) {
+        console.error(err);
+        if (err.response?.status === 503)
+          return alert(
+            "Image upload is too big and vercel rejected it (I genuinely don't know what vercel's limit is so just try smaller image).",
+          );
         if (err.response?.data?.message) {
-          console.error(err);
           return alert(err.response?.data?.message);
         }
       }
