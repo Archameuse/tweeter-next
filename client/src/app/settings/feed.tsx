@@ -139,7 +139,7 @@ export default function SettingsFeed({
     setShowBannerModal(true);
   };
   const handleSelectBanner = async (file: File) => {
-    const { error, localUrl } = await validateImage(file, 10);
+    const { error, localUrl } = await validateImage(file, 2048);
     if (!localUrl) return alert(error);
     if (bannerUrl && bannerUrl.startsWith("blob:"))
       URL.revokeObjectURL(bannerUrl);
@@ -149,7 +149,8 @@ export default function SettingsFeed({
   };
 
   const handleSelectAvatar = async (file: File) => {
-    const localUrl = URL.createObjectURL(file);
+    const { error, localUrl } = await validateImage(file, 2048);
+    if (!localUrl) return alert(error);
     if (avatarUrl && avatarUrl.startsWith("blob:"))
       URL.revokeObjectURL(avatarUrl);
     setAvatarUrl(localUrl);
