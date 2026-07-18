@@ -10,7 +10,7 @@ import { useMutation } from "@tanstack/react-query";
 import { CheckCircleIcon, LucideImageMinus } from "lucide-react";
 import { useState } from "react";
 import axios, { AxiosError } from "axios";
-import { API_URL, fetchUploadToken } from "@/utils/userHelpers";
+import { ACTUAL_API_URL, API_URL, fetchUploadToken } from "@/utils/userHelpers";
 import { useUser } from "@/providers/UserProvider";
 import {
   emailSchema,
@@ -58,7 +58,7 @@ export default function SettingsFeed({
         throw new AxiosError(
           uploadTokenError || "Unknown error while fetching token",
         );
-      const res = await axios.put(`${API_URL}/users/settings`, data, {
+      const res = await axios.put(`${ACTUAL_API_URL}/users/settings`, data, {
         headers: {
           ...uploadToken,
         },
