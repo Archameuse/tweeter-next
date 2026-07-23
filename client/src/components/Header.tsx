@@ -210,7 +210,7 @@ function HeaderProfile({ user }: { user: User }) {
       <span className="text-xs dark:text-white max-w-48 text-ellipsis overflow-hidden font-bold whitespace-nowrap">
         {getUsername(user)}
       </span>
-      <ChevronDown className="opacity-80" />
+      <ChevronDown className="opacity-80 sm:hidden" />
     </div>
   );
 }
